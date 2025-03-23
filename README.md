@@ -3,7 +3,7 @@ HRPulse is a comprehensive platform which consist of a mobile app for employee a
 
 ## Tech Stack
 - Frontend - React Native with Expo
-- Backend - Express.js
+- Backend - FastAPI
 - Database - Supabase
 - Development Tools - Android Studio
 
