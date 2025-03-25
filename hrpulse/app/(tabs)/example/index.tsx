@@ -7,13 +7,13 @@ import { type ImageSource } from 'expo-image';
 import { captureRef } from 'react-native-view-shot';
 import domtoimage from 'dom-to-image';
 
-import Button from '@/components/Button';
-import ImageViewer from '@/components/ImageViewer';
-import IconButton from '@/components/IconButton';
-import CircleButton from '@/components/CircleButton';
-import EmojiPicker from '@/components/EmojiPicker';
-import EmojiList from '@/components/EmojiList';
-import EmojiSticker from '@/components/EmojiSticker';
+import Button from '@/components/example/Button';
+import ImageViewer from '@/components/example/ImageViewer';
+import IconButton from '@/components/example/IconButton';
+import CircleButton from '@/components/example/CircleButton';
+import EmojiPicker from '@/components/example/EmojiPicker';
+import EmojiList from '@/components/example/EmojiList';
+import EmojiSticker from '@/components/example/EmojiSticker';
 
 const PlaceholderImage = require('@/assets/images/background-image.png');
 
