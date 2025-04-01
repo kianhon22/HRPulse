@@ -19,9 +19,8 @@ const ExpoSecureStoreAdapter = {
 
 // Create supabase client for interacting with the database
 export const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_KEY!,
-  // EXPO_PUBLIC_SUPABASE_URL
+  process.env.EXPO_PUBLIC_SUPABASE_URL || '',
+  process.env.EXPO_PUBLIC_SUPABASE_KEY || '',
   {
     auth: {
       storage: Platform.OS === 'web' ? localStorage : ExpoSecureStoreAdapter,

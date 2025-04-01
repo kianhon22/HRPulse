@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View, TextInput, TouchableOpacity, Text, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, TextInput, TouchableOpacity, Text, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useRouter, Link } from 'expo-router';
 
@@ -24,71 +24,101 @@ export default function Login() {
 
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
-        email: form.email,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: form.email.trim(),
         password: form.password,
       });
 
-      if (error) throw error;
-      // router.replace('/(tabs)');
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          Alert.alert('Login Failed', 'Invalid email or password');
+        } else if (error.message.includes('Email not confirmed')) {
+          Alert.alert('Email Not Verified', 'Please verify your email before logging in');
+        } else {
+          Alert.alert('Error', error.message);
+        }
+        return;
+      }
+
+      if (data?.user) {
+        router.replace('/');
+      }
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.formContainer}>
-        <Text style={styles.title}>HRPulse</Text>
-        <Text style={styles.subtitle}>Employee Portal</Text>
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={form.email}
-          onChangeText={(text) => setForm(prev => ({ ...prev, email: text }))}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          editable={!loading}
-        />
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={form.password}
-          onChangeText={(text) => setForm(prev => ({ ...prev, password: text }))}
-          secureTextEntry
-          autoCapitalize="none"
-          editable={!loading}
-        />
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.keyboardAvoidingView}
+    >
+      <ScrollView 
+        contentContainerStyle={styles.scrollViewContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.container}>
+          <View style={styles.formContainer}>
+            <Text style={styles.title}>HRPulse</Text>
+            <Text style={styles.subtitle}>Employee Portal</Text>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              value={form.email}
+              onChangeText={(text) => setForm(prev => ({ ...prev, email: text }))}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              editable={!loading}
+              autoComplete="email"
+            />
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              value={form.password}
+              onChangeText={(text) => setForm(prev => ({ ...prev, password: text }))}
+              secureTextEntry
+              autoCapitalize="none"
+              editable={!loading}
+              autoComplete="password"
+            />
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={signInWithEmail}
-          disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <Link href="/register" asChild>
-            <TouchableOpacity>
-              <Text style={styles.linkText}>Register</Text>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={signInWithEmail}
+              disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.buttonText}>Sign In</Text>
+              )}
             </TouchableOpacity>
-          </Link>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account? </Text>
+              <Link href="/register" asChild>
+                <TouchableOpacity>
+                  <Text style={styles.linkText}>Register</Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
+          </View>
         </View>
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',

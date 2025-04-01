@@ -1,7 +1,7 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
@@ -12,11 +12,6 @@ export {
   ErrorBoundary,
 } from 'expo-router';
 
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
-};
-
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
@@ -26,6 +21,7 @@ export default function RootLayout() {
   });
 
   const router = useRouter();
+  const segments = useSegments();
   const colorScheme = useColorScheme();
 
   useEffect(() => {
@@ -37,20 +33,28 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
-
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const handleRedirect = (session: any) => {
+      const currentSegment = segments[0] || '';
       if (!session) {
         router.replace('/login');
-      }
+      } 
+    };
+
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleRedirect(session);
     });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        router.replace('/login');
-      }
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleRedirect(session);
     });
-  }, []);
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [segments]);
 
   if (!loaded) {
     return null;
@@ -58,10 +62,10 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        {/* <Stack.Screen name="login" /> */}
+        <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
       </Stack>
     </ThemeProvider>
   );
