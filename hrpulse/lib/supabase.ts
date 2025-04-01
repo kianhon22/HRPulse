@@ -1,10 +1,10 @@
 import 'react-native-url-polyfill/auto'
 import { createClient } from '@supabase/supabase-js'
-import { Database } from '../types/schema'
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
+// import { Database } from '../types/schema'
 
-// We need to provide a custom storage solution for Expo since localStorage is not available
+// Custom storage solution to replace AsyncStorage
 const ExpoSecureStoreAdapter = {
   getItem: (key: string) => {
     return SecureStore.getItemAsync(key)
@@ -17,14 +17,11 @@ const ExpoSecureStoreAdapter = {
   },
 }
 
-// Use environment variables from .env file
-const supabaseUrl = process.env.SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_KEY!
-
-// Create a single supabase client for interacting with your database
-export const supabase = createClient<Database>(
-  supabaseUrl,
-  supabaseKey,
+// Create supabase client for interacting with the database
+export const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_KEY!,
+  // EXPO_PUBLIC_SUPABASE_URL
   {
     auth: {
       storage: Platform.OS === 'web' ? localStorage : ExpoSecureStoreAdapter,
@@ -33,4 +30,16 @@ export const supabase = createClient<Database>(
       detectSessionInUrl: false,
     },
   }
-) 
+)
+
+// Reusable functions for user data
+export async function getUserProfile(userId: string) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error) throw error;
+  return data;
+} 

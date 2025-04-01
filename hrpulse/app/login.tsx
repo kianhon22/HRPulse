@@ -1,27 +1,41 @@
 import { useState } from 'react';
-import { StyleSheet, View, TextInput, TouchableOpacity, Text, Alert } from 'react-native';
+import { StyleSheet, View, TextInput, TouchableOpacity, Text, Alert, ActivityIndicator } from 'react-native';
 import { supabase } from '../lib/supabase';
-import { useRouter } from 'expo-router';
+import { useRouter, Link } from 'expo-router';
+
+interface LoginForm {
+  email: string;
+  password: string;
+}
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [form, setForm] = useState<LoginForm>({
+    email: '',
+    password: '',
+  });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function signInWithEmail() {
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
-      router.replace('/(tabs)');
+    if (!form.email || !form.password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
     }
-    setLoading(false);
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+
+      if (error) throw error;
+      // router.replace('/(tabs)');
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -33,29 +47,42 @@ export default function Login() {
         <TextInput
           style={styles.input}
           placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
+          value={form.email}
+          onChangeText={(text) => setForm(prev => ({ ...prev, email: text }))}
           autoCapitalize="none"
           keyboardType="email-address"
+          editable={!loading}
         />
         
         <TextInput
           style={styles.input}
           placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
+          value={form.password}
+          onChangeText={(text) => setForm(prev => ({ ...prev, password: text }))}
           secureTextEntry
           autoCapitalize="none"
+          editable={!loading}
         />
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={signInWithEmail}
           disabled={loading}>
-          <Text style={styles.buttonText}>
-            {loading ? 'Loading...' : 'Sign In'}
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.buttonText}>Sign In</Text>
+          )}
         </TouchableOpacity>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Link href="/register" asChild>
+            <TouchableOpacity>
+              <Text style={styles.linkText}>Register</Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
       </View>
     </View>
   );
@@ -109,6 +136,8 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
+    height: 50,
+    justifyContent: 'center',
   },
   buttonDisabled: {
     backgroundColor: '#ccc',
@@ -116,6 +145,20 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontSize: 18,
+    fontWeight: '600',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  footerText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  linkText: {
+    color: '#007AFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 }); 
