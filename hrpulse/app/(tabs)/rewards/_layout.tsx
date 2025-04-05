@@ -1,12 +1,13 @@
 import { Stack } from 'expo-router';
+import Header from '../../../components/Header';
 
 export default function RewardsLayout() {
   return (
     <Stack>
-      <Stack.Screen
+      <Stack.Screen 
         name="index"
         options={{
-          title: 'Rewards',
+          header: () => <Header title="Rewards & Recognition" />,
         }}
       />
     </Stack>

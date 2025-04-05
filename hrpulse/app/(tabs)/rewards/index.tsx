@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, FlatList, Alert, Image } from 'react-native';
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '../../../supabase';
 import { Link } from 'expo-router';
 
 interface Reward {

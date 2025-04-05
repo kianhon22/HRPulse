@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import Header from '../../../components/Header';
 
 export default function AttendanceLayout() {
   return (
@@ -6,7 +7,7 @@ export default function AttendanceLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Attendance',
+          header: () => <Header title="Attendance Record" />,
         }}
       />
     </Stack>

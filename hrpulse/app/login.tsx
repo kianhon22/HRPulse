@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity, Text, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../supabase';
 import { useRouter, Link } from 'expo-router';
 
 interface LoginForm {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity, Text, Alert, ActivityIndicator, ScrollView } from 'react-native';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../supabase';
 import { useRouter, Link } from 'expo-router';
 
 interface RegisterForm {
@@ -64,7 +64,7 @@ export default function Register() {
       if (user) {
         // Create profile
         const { error: profileError } = await supabase
-          .from('profiles')
+          .from('users')
           .insert({
             id: user.id,
             full_name: form.fullName,

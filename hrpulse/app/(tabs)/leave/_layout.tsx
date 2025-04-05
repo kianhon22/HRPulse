@@ -1,19 +1,19 @@
 import { Stack } from 'expo-router';
 import Header from '../../../components/Header';
 
-export default function SurveyLayout() {
+export default function LeaveLayout() {
   return (
     <Stack>
       <Stack.Screen 
         name="index"
         options={{
-          header: () => <Header title="Survey & Feedback" />,
+          header: () => <Header title="Leave Application" />,
         }}
       />
       <Stack.Screen 
-        name="[id]"
+        name="apply"
         options={{
-          header: () => <Header title="Survey Response" />,
+          header: () => <Header title="Apply Leave" />,
         }}
       />
     </Stack>

@@ -1,8 +1,7 @@
 // hrpulse/app/home.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
-import Header from '../../components/Header';
-import { FontAwesome } from '@expo/vector-icons';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import HomeHeader from '../../components/HomeHeader';
 
 export default function Home() {
   return (
@@ -13,11 +12,7 @@ export default function Home() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
-          <Header userName="Kian Hon" currentTime="Tue, Apr 1 10:00 PM" />
-
-          <View style={styles.iconContainer}>
-            <FontAwesome name="home" size={48} color="#007AFF" />
-          </View>
+          <HomeHeader />
 
           <View style={styles.content}>
             <View style={styles.card}>
@@ -73,10 +68,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-  },
-  iconContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
   },
   content: {
     padding: 20,

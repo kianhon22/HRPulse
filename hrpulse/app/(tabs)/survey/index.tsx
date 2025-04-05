@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, FlatList, Alert } from 'react-native';
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '../../../supabase';
 import { Link } from 'expo-router';
 
 interface Survey {
@@ -80,7 +80,7 @@ export default function SurveyScreen() {
     <View style={styles.container}>
       {surveys.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No active surveys available</Text>
+          <Text style={styles.emptyText}>No surveys available</Text>
         </View>
       ) : (
         <FlatList

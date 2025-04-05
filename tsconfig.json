@@ -4,9 +4,7 @@
     "strict": true,
     "moduleResolution": "bundler",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     }
   },
   "include": [
@@ -15,4 +13,4 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
   ]
-}
+} 

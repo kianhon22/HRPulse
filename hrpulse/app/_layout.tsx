@@ -1,11 +1,13 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Drawer } from 'expo-router/drawer';
+import { Ionicons } from '@expo/vector-icons';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../supabase';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -15,9 +17,16 @@ export {
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+function TabBarIcon(props: {
+  name: React.ComponentProps<typeof FontAwesome>['name'];
+  color: string;
+}) {
+  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
+}
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    ...FontAwesome.font,
+    ...Ionicons.font,
   });
 
   const router = useRouter();
@@ -33,12 +42,13 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
   useEffect(() => {
     const handleRedirect = (session: any) => {
       const currentSegment = segments[0] || '';
       if (!session) {
         router.replace('/login');
-      } 
+      }
     };
 
     // Initial session check
@@ -62,11 +72,76 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        {/* <Stack.Screen name="login" /> */}
-        <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
-      </Stack>
+      <Drawer
+        screenOptions={{
+          headerShown: false,
+          drawerStyle: {
+            backgroundColor: '#fff',
+            width: 220,
+          },
+          drawerActiveBackgroundColor: '#6A1B9A20',
+          drawerActiveTintColor: '#6A1B9A',
+          drawerInactiveTintColor: '#333',
+          drawerItemStyle: {
+            paddingLeft: 10,
+            borderRadius: 8,
+          },
+          drawerLabelStyle: {
+            marginLeft: 8,
+            fontSize: 16,
+            fontWeight: '500',
+          },
+        }}
+      >
+        <Drawer.Screen
+          name="profile"
+          options={{
+            drawerLabel: 'Profile',
+            drawerIcon: ({ color, size }: { color: string; size: number }) => (
+              <Ionicons name="person-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="settings"
+          options={{
+            drawerLabel: 'Settings',
+            drawerIcon: ({ color, size }: { color: string; size: number }) => (
+              <Ionicons name="settings-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="(tabs)"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="notifications"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="login"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="register"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+        <Drawer.Screen
+          name="+not-found"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
+      </Drawer>
     </ThemeProvider>
   );
 }
