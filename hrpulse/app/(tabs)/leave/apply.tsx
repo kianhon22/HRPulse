@@ -16,10 +16,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Picker } from '@react-native-picker/picker';
 
 const LEAVE_TYPES = [
-  'Annual Leave',
-  'Medical Leave',
-  'Emergency Leave',
-  'Unpaid Leave',
+  { label: 'Annual Leave', value: 'annual' },
+  { label: 'Medical Leave', value: 'medical' },
+  { label: 'Emergency Leave', value: 'emergency' },
+  { label: 'Unpaid Leave', value: 'unpaid' },
 ];
 
 export default function LeaveApplicationForm() {
@@ -29,11 +29,17 @@ export default function LeaveApplicationForm() {
   const [reason, setReason] = useState('');
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [attachmentName, setAttachmentName] = useState('');
+  const [attachment, setAttachment] = useState<{
+    assets?: Array<{
+      name: string;
+      uri: string;
+      mimeType?: string;
+    }>;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const calculateDays = (start: Date, end: Date) => {
-    const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
+    const oneDay = 24 * 60 * 60 * 1000;
     const diffDays = Math.round(Math.abs((end.getTime() - start.getTime()) / oneDay)) + 1;
     return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
   };
@@ -47,11 +53,17 @@ export default function LeaveApplicationForm() {
     if (selectedDate) {
       if (isStart) {
         setStartDate(selectedDate);
+        // If start date is after end date, update end date
         if (selectedDate > endDate) {
           setEndDate(selectedDate);
         }
       } else {
-        setEndDate(selectedDate);
+        // Only update end date if it's after start date
+        if (selectedDate >= startDate) {
+          setEndDate(selectedDate);
+        } else {
+          Alert.alert('Invalid Date', 'End date cannot be before start date');
+        }
       }
     }
   };
@@ -63,16 +75,53 @@ export default function LeaveApplicationForm() {
       });
 
       if (result.assets && result.assets[0]) {
-        setAttachmentName(result.assets[0].name);
+        setAttachment(result);
       }
     } catch (err) {
       console.error('Error picking document:', err);
     }
   };
 
+  const uploadAttachment = async (userId: string): Promise<string | null> => {
+    if (!attachment?.assets?.[0]) return null;
+
+    const file = attachment.assets[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}-${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    try {
+      // Convert URI to Blob
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase
+        .storage
+        .from('leaves')
+        .upload(filePath, blob, {
+          contentType: file.mimeType || 'application/octet-stream'
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('leaves')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      Alert.alert('Error', 'Failed to upload file');
+      return null;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!leaveType || !startDate || !endDate || !reason) {
-      Alert.alert('Error', 'Please fill in the required fields');
+      Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
@@ -82,6 +131,9 @@ export default function LeaveApplicationForm() {
       if (!user) throw new Error('Not authenticated');
 
       const period = calculateDays(startDate, endDate);
+      
+      // Upload attachment if exists
+      const attachmentUrl = await uploadAttachment(user.id);
 
       const { error } = await supabase
         .from('leaves')
@@ -93,8 +145,8 @@ export default function LeaveApplicationForm() {
             end_date: endDate.toISOString(),
             period,
             reason,
-            status: 'Pending',
-            attachment_url: null,
+            status: 'pending',
+            attachment_url: attachmentUrl,
           },
         ]);
 
@@ -126,7 +178,7 @@ export default function LeaveApplicationForm() {
             >
               <Picker.Item label="Choose leave type..." value="" />
               {LEAVE_TYPES.map((type) => (
-                <Picker.Item key={type} label={type} value={type} />
+                <Picker.Item key={type.value} label={type.label} value={type.value} />
               ))}
             </Picker>
           </View>
@@ -145,6 +197,7 @@ export default function LeaveApplicationForm() {
             <DateTimePicker
               value={startDate}
               mode="date"
+              minimumDate={new Date()}
               onChange={(event, date) => handleDateChange(event, date, true)}
             />
           )}
@@ -188,7 +241,7 @@ export default function LeaveApplicationForm() {
             <TextInput
               style={styles.uploadInput}
               placeholder="pdf, jpg files"
-              value={attachmentName}
+              value={attachment?.assets?.[0]?.name || ''}
               editable={false}
             />
             <TouchableOpacity

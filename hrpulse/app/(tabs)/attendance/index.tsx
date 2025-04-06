@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { supabase } from '../../../supabase';
-import { FontAwesome } from '@expo/vector-icons';
-import * as Location from 'expo-location';
 
 interface AttendanceRecord {
   id: string;
@@ -11,175 +9,127 @@ interface AttendanceRecord {
   check_in: string;
   check_out: string | null;
   total_hours: number | null;
-  location: {
-    latitude: number;
-    longitude: number;
-    timestamp: string;
-  } | null;
-}
-
-interface UserProfile {
-  id: string;
-  work_mode: string;
 }
 
 interface MarkedDates {
   [date: string]: {
-    marked: boolean;
-    dotColor: string;
-    selected: boolean;
+    marked?: boolean;
+    dotColor?: string;
+    selected?: boolean;
+    startingDay?: boolean;
+    endingDay?: boolean;
+    color?: string;
+    textColor?: string;
   };
 }
 
 export default function AttendancePage() {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  // Get default date range (last 2 weeks)
+  const today = new Date();
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(today.getDate() - 14);
+  
+  const [startDate, setStartDate] = useState<string | null>(twoWeeksAgo.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState<string | null>(today.toISOString().split('T')[0]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [markedDates, setMarkedDates] = useState<MarkedDates>({});
-  const [loading, setLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    loadUserProfile();
     loadAttendanceRecords();
-  }, []);
-
-  async function loadUserProfile() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, work_mode')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-      setUserProfile(data);
-    } catch (error) {
-      console.error('Error loading user profile:', error);
-    }
-  }
+  }, [startDate, endDate]);
 
   async function loadAttendanceRecords() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('attendances')
         .select('*')
         .eq('user_id', user.id)
         .order('check_in', { ascending: false });
 
+      // Apply date range filter if both dates are selected
+      if (startDate && endDate) {
+        query = query
+          .gte('check_in', `${startDate}T00:00:00`)
+          .lte('check_in', `${endDate}T23:59:59`);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
       setAttendanceRecords(data || []);
-      
-      // Mark dates on calendar
-      const marks: MarkedDates = {};
-      data?.forEach(record => {
-        const date = new Date(record.check_in).toISOString().split('T')[0];
-        marks[date] = {
-          marked: true,
-          dotColor: '#007AFF',
-          selected: date === selectedDate
-        };
-      });
-      setMarkedDates(marks);
+      updateMarkedDates(data || []);
     } catch (error) {
       console.error('Error loading attendance:', error);
-      Alert.alert('Error', 'Failed to load attendance records');
-    } finally {
-      setLoading(false);
     }
   }
 
-  async function handleCheckIn() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        Alert.alert('Error', 'Please log in again');
-        return;
-      }
-
-      let locationData = null;
-
-      // Only get location for remote employees
-      if (userProfile?.work_mode === 'remote') {
-        // Request location permission
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission Denied', 'Location permission is required for remote attendance');
-          return;
-        }
-
-        // Get current location
-        const location = await Location.getCurrentPositionAsync({});
-        locationData = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
+  function updateMarkedDates(records: AttendanceRecord[]) {
+    const marks: MarkedDates = {};
+    
+    // Mark the date range if selected
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      for (let date = start; date <= end; date.setDate(date.getDate() + 1)) {
+        const dateStr = date.toISOString().split('T')[0];
+        marks[dateStr] = {
+          color: '#E8F5E9',
+          textColor: '#000000',
         };
       }
-
-      const { data, error } = await supabase
-        .from('attendances')
-        .insert([
-          {
-            user_id: user.id,
-            check_in: new Date().toISOString(),
-            location: locationData
-          }
-        ]);
-
-      if (error) throw error;
-      Alert.alert('Success', 'Checked in successfully');
-      loadAttendanceRecords();
-    } catch (error) {
-      console.error('Error checking in:', error);
-      Alert.alert('Error', 'Failed to check in');
+      
+      // Add special marking for start and end dates
+      marks[startDate] = {
+        ...marks[startDate],
+        startingDay: true,
+        color: '#6A1B9A',
+        textColor: '#FFFFFF'
+      };
+      marks[endDate] = {
+        ...marks[endDate],
+        endingDay: true,
+        color: '#6A1B9A',
+        textColor: '#FFFFFF'
+      };
     }
+
+    // Mark dates with attendance records
+    records.forEach(record => {
+      const date = new Date(record.check_in).toISOString().split('T')[0];
+      if (marks[date]) {
+        marks[date] = {
+          ...marks[date],
+          marked: true,
+          dotColor: '#4CAF50'
+        };
+      } else {
+        marks[date] = {
+          marked: true,
+          dotColor: '#4CAF50'
+        };
+      }
+    });
+
+    setMarkedDates(marks);
   }
 
-  async function handleCheckOut() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        Alert.alert('Error', 'Please log in again');
-        return;
+  function handleDayPress(day: DateData) {
+    if (!startDate || (startDate && endDate)) {
+      // Start new selection
+      setStartDate(day.dateString);
+      setEndDate(null);
+    } else {
+      // Complete the selection
+      if (new Date(day.dateString) >= new Date(startDate)) {
+        setEndDate(day.dateString);
+      } else {
+        setEndDate(startDate);
+        setStartDate(day.dateString);
       }
-
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-
-      // Find today's record
-      const todayRecord = attendanceRecords.find(record => 
-        new Date(record.check_in).toISOString().split('T')[0] === today && !record.check_out
-      );
-
-      if (!todayRecord) {
-        Alert.alert('Error', 'No active check-in found for today');
-        return;
-      }
-
-      // Calculate total hours
-      const checkInTime = new Date(todayRecord.check_in);
-      const totalHours = ((now.getTime() - checkInTime.getTime()) / (1000 * 60 * 60));
-
-      const { error } = await supabase
-        .from('attendances')
-        .update({
-          check_out: now.toISOString(),
-          total_hours: parseFloat(totalHours.toFixed(2))
-        })
-        .eq('id', todayRecord.id);
-
-      if (error) throw error;
-      Alert.alert('Success', 'Checked out successfully');
-      loadAttendanceRecords();
-    } catch (error) {
-      console.error('Error checking out:', error);
-      Alert.alert('Error', 'Failed to check out');
     }
   }
 
@@ -194,38 +144,15 @@ export default function AttendancePage() {
   return (
     <View style={styles.container}>
       <Calendar
-        current={selectedDate}
-        onDayPress={(day: DateData) => setSelectedDate(day.dateString)}
+        onDayPress={handleDayPress}
         markedDates={markedDates}
+        markingType="period"
         theme={{
           selectedDayBackgroundColor: '#6A1B9A',
           todayTextColor: '#6A1B9A',
           arrowColor: '#6A1B9A',
         }}
       />
-
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={[
-            styles.checkButton,
-            loading && styles.buttonDisabled
-          ]} 
-          onPress={handleCheckIn}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>Check In</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[
-            styles.checkButton,
-            loading && styles.buttonDisabled
-          ]} 
-          onPress={handleCheckOut}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>Check Out</Text>
-        </TouchableOpacity>
-      </View>
 
       <ScrollView style={styles.recordsList}>
         {attendanceRecords.map((record) => (
@@ -267,27 +194,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 15,
-    backgroundColor: 'white',
-  },
-  checkButton: {
-    backgroundColor: '#6A1B9A',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-    elevation: 2,
-  },
-  buttonDisabled: {
-    backgroundColor: '#B39DDB',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
   },
   recordsList: {
     flex: 1,

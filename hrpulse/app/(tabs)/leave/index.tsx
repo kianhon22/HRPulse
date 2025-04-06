@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { Link } from 'expo-router';
 import { supabase } from '../../../supabase';
 import { FontAwesome } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 
 interface LeaveApplication {
   id: string;
@@ -12,28 +13,47 @@ interface LeaveApplication {
   end_date: string;
   period: string;
   reason: string;
-  status: 'Pending' | 'Approved' | 'Rejected';
+  status: 'pending' | 'approved' | 'rejected';
   created_at: string;
 }
+
+const LEAVE_TYPES = [
+  { label: 'All Types', value: '' },
+  { label: 'Annual', value: 'annual' },
+  { label: 'Medical', value: 'medical' },
+  { label: 'Emergency', value: 'emergency' },
+  { label: 'Unpaid', value: 'unpaid' },
+];
 
 export default function LeaveHistoryPage() {
   const [applications, setApplications] = useState<LeaveApplication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedType, setSelectedType] = useState('');
 
   useEffect(() => {
     loadLeaveApplications();
-  }, []);
+  }, [selectedType]);
 
   async function loadLeaveApplications() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      const currentYear = new Date().getFullYear();
+      const yearStart = `${currentYear}-01-01`;
+
+      let query = supabase
         .from('leaves')
         .select('*')
         .eq('user_id', user.id)
+        .gte('start_date', yearStart)
         .order('created_at', { ascending: false });
+
+      if (selectedType) {
+        query = query.eq('leave_type', selectedType);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setApplications(data || []);
@@ -46,11 +66,11 @@ export default function LeaveHistoryPage() {
 
   function getStatusColor(status: string) {
     switch (status) {
-      case 'Pending':
+      case 'pending':
         return '#FF9800';
-      case 'Approved':
+      case 'approved':
         return '#4CAF50';
-      case 'Rejected':
+      case 'rejected':
         return '#F44336';
       default:
         return '#999';
@@ -65,22 +85,45 @@ export default function LeaveHistoryPage() {
     });
   }
 
+  function formatLeaveType(type: string): string {
+    return type.charAt(0).toUpperCase() + type.slice(1) + ' Leave';
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Application History</Text>
         <Link href="../apply" asChild>
           <TouchableOpacity style={styles.applyButton}>
-            <Text style={styles.applyButtonText}>Apply leave</Text>
+            <FontAwesome name="plus" size={14} color="white" style={styles.plusIcon} />
+            <Text style={styles.applyButtonText}>Take Leave</Text>
           </TouchableOpacity>
         </Link>
+      </View>
+
+      <View style={styles.filterContainer}>
+        <Picker
+          selectedValue={selectedType}
+          onValueChange={(value) => setSelectedType(value)}
+          style={styles.picker}
+        >
+          {LEAVE_TYPES.map((type) => (
+            <Picker.Item 
+              key={type.value} 
+              label={type.label} 
+              value={type.value}
+            />
+          ))}
+        </Picker>
       </View>
 
       <ScrollView style={styles.applicationsList}>
         {applications.map((application) => (
           <View key={application.id} style={styles.applicationCard}>
             <View style={styles.cardHeader}>
-              <Text style={styles.leaveType}>{application.leave_type}</Text>
+              <Text style={styles.leaveType}>
+                {formatLeaveType(application.leave_type)}
+              </Text>
               <View style={[
                 styles.statusBadge,
                 { backgroundColor: getStatusColor(application.status) }
@@ -130,11 +173,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   applyButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  plusIcon: {
+    marginRight: 6,
   },
   applicationsList: {
     flex: 1,
@@ -179,5 +227,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontStyle: 'italic',
+  },
+  filterContainer: {
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  picker: {
+    height: 50,
   },
 }); 

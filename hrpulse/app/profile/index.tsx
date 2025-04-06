@@ -112,11 +112,10 @@ export default function ProfileScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Upload image to storage
-      const fileName = `profile-${user.id}-${Date.now()}.jpg`;
+      const fileName = `${user.id}-${Date.now()}.jpg`;
       const { data: uploadData, error: uploadError } = await supabase
         .storage
-        .from('profile')
+        .from('profiles')
         .upload(fileName, decode(base64Image), {
           contentType: 'image/jpeg',
           upsert: true
@@ -124,10 +123,9 @@ export default function ProfileScreen() {
 
       if (uploadError) throw uploadError;
 
-      // Get the public URL
       const { data: { publicUrl } } = supabase
         .storage
-        .from('profile')
+        .from('profiles')
         .getPublicUrl(fileName);
 
       // Update user profile
