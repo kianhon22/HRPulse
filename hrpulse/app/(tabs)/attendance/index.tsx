@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { supabase } from '../../../supabase';
+import { formatTotalHours } from '../../../utils/formatText';
 
 interface AttendanceRecord {
   id: string;
@@ -179,7 +180,7 @@ export default function AttendancePage() {
               <View style={styles.timeBlock}>
                 <Text style={styles.timeLabel}>Total Hours</Text>
                 <Text style={styles.timeValue}>
-                  {record.total_hours ? `${record.total_hours.toFixed(2)}h` : '--:--'}
+                  {formatTotalHours(record.total_hours ?? 0)}
                 </Text>
               </View>
             </View>

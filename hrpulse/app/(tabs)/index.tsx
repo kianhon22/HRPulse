@@ -4,7 +4,8 @@ import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Ale
 import { supabase } from '../../supabase';
 import HomeHeader from '../../components/HomeHeader';
 import * as Location from 'expo-location';
-import { getUserData, UserData } from '../../hooks/getUserData';
+import { getUserData } from '../../hooks/getUserData';
+import { formatTotalHours } from '../../utils/formatText';
 
 interface AttendanceRecord {
   id: string;
@@ -34,7 +35,7 @@ async function calculateRemainingLeaves(userId: string, joinDate?: string, leftD
   const serviceYears = calculateServiceYears(joinDate, leftDate);
   const annualLeaves = calculateAnnualLeaves(serviceYears);
   
-  // Get approved leaves for current year
+  // Get A leaves for current year
   const currentYear = new Date().getFullYear();
   const startOfYear = `${currentYear}-01-01`;
   const endOfYear = `${currentYear}-12-31`;
@@ -42,15 +43,15 @@ async function calculateRemainingLeaves(userId: string, joinDate?: string, leftD
   try {
     const { data: leavesData, error } = await supabase
       .from('leaves')
-      .select('total_days')
+      .select('period')
       .eq('user_id', userId)
-      .eq('status', 'approved')
+      .eq('status', 'Approved')
       .gte('start_date', startOfYear)
       .lte('end_date', endOfYear);
 
     if (error) throw error;
 
-    const usedLeaves = leavesData?.reduce((total, leave) => total + (leave.total_days || 0), 0) || 0;
+    const usedLeaves = leavesData?.reduce((total, leave) => total + (leave.period || 0), 0) || 0;
     return annualLeaves - usedLeaves;
   } catch (error) {
     console.error('Error calculating remaining leaves:', error);
@@ -116,10 +117,10 @@ export default function Home() {
     try {
       setLoading(true);
       let locationData = null;
-      if (userData?.work_mode === 'remote') {
+      if (userData?.work_mode === 'Remote') {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Permission Denied', 'Location permission is required for remote attendance');
+          Alert.alert('Permission Denied', 'Location permission is required for remote employee');
           return;
         }
         const location = await Location.getCurrentPositionAsync({});
@@ -201,7 +202,7 @@ export default function Home() {
             <View style={[styles.card, styles.checkCard]}>
               <Text style={styles.cardTitle}>
                 {!todayRecord ? 'Check In' : 
-                  !todayRecord.check_out ? 'Check Out' : 'Today\'s Record'}
+                  !todayRecord.check_out ? 'Check Out' : 'Today\'s Attendance'}
               </Text>
               {todayRecord ? (
                 <>
@@ -214,7 +215,7 @@ export default function Home() {
                         Out: {formatTime(todayRecord.check_out)}
                       </Text>
                       <Text style={styles.hoursText}>
-                        Total: {todayRecord.total_hours?.toFixed(2)}h
+                        Total Hours: {formatTotalHours(todayRecord.total_hours ?? 0)}
                       </Text>
                     </>
                   )}
@@ -247,9 +248,11 @@ export default function Home() {
 
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Annual Leave</Text>
-              <Text style={styles.cardValue}>{remainingLeaves}</Text>
-              <Text style={styles.cardSubtitle}>remaining days</Text>
-              <Text style={styles.serviceYears}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
+                <Text style={styles.cardValue}>{remainingLeaves}</Text>
+                <Text style={styles.remainingDays}>days left</Text>
+              </View>
+              <Text style={styles.cardSubtitle}>
                 {calculateServiceYears(userData?.join_company_date || '', userData?.left_company_date)} years of service
               </Text>
             </View>
@@ -341,7 +344,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   hoursText: {
-    fontSize: 20,
+    fontSize:18,
     fontWeight: 'bold',
     color: 'white',
     marginTop: 8,
@@ -365,10 +368,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  serviceYears: {
-    fontSize: 12,
+  remainingDays: {
+    fontSize: 14,
     color: '#666',
-    marginTop: 4,
+    marginBottom: 3,
+    marginLeft: 5,
     fontStyle: 'italic',
   },
 });

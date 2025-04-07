@@ -48,4 +48,12 @@ export const formatDate = (date?: Date | string | null, format: 'short' | 'mediu
       day: 'numeric'
     });
   }
-}; 
+};
+
+export const formatTotalHours = (totalHours: number | null): string => {
+  if (totalHours === null) return '--:--';
+  const hours = Math.floor(totalHours);
+  const minutes = Math.round((totalHours - hours) * 60);
+  return `${hours} hr ${minutes} min`;
+  // return `${hours} hr${hours !== 1 ? 's' : ''} ${minutes} min`;
+}

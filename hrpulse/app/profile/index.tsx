@@ -13,7 +13,7 @@ import { supabase } from '../../supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
-import { capitalizeFirstLetter, formatDate } from '../../utils/formatText';
+import { formatDate } from '../../utils/formatText';
 
 interface UserProfile {
   id: string;
@@ -243,12 +243,12 @@ export default function ProfileScreen() {
 
           <View style={styles.field}>
             <Text style={styles.label}>Employment Type</Text>
-            <Text style={styles.value}>{capitalizeFirstLetter(profile.employment_type)}</Text>
+            <Text style={styles.value}>{profile.employment_type}</Text>
           </View>
 
           <View style={styles.field}>
             <Text style={styles.label}>Work Mode</Text>
-            <Text style={styles.value}>{capitalizeFirstLetter(profile.work_mode)}</Text>
+            <Text style={styles.value}>{profile.work_mode}</Text>
           </View>
 
           <View style={styles.field}>

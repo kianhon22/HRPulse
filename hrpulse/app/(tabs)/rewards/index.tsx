@@ -52,7 +52,7 @@ export default function RewardsScreen() {
         .from('reward_redemptions')
         .select('points_spent')
         .eq('user_id', user.id)
-        .eq('status', 'approved');
+        .eq('status', 'Approved');
 
       if (redemptionsError) throw redemptionsError;
 

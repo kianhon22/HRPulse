@@ -13,9 +13,9 @@ export default function SurveyLayout() {
       <Stack.Screen 
         name="[id]"
         options={{
-          header: () => <Header title="Survey Response" />,
+          header: () => <Header title="Survey Form" />,
         }}
       />
     </Stack>
   );
-} 
+}

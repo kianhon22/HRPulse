@@ -54,7 +54,7 @@ export default function RewardDetailsScreen() {
         .from('reward_redemptions')
         .select('points_spent')
         .eq('user_id', user.id)
-        .eq('status', 'approved');
+        .eq('status', 'Approved');
 
       if (redemptionsError) throw redemptionsError;
       const spentPoints = (redemptionsData || []).reduce((sum, red) => sum + (red.points_spent || 0), 0);
@@ -85,7 +85,7 @@ export default function RewardDetailsScreen() {
           user_id: user.id,
           reward_id: reward.id,
           points_spent: reward.points_required,
-          status: 'pending'
+          status: 'Pending'
         });
 
       if (error) throw error;

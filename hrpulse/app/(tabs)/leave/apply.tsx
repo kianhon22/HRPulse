@@ -16,10 +16,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Picker } from '@react-native-picker/picker';
 
 const LEAVE_TYPES = [
-  { label: 'Annual Leave', value: 'annual' },
-  { label: 'Medical Leave', value: 'medical' },
-  { label: 'Emergency Leave', value: 'emergency' },
-  { label: 'Unpaid Leave', value: 'unpaid' },
+  'Annual',
+  'Medical',
+  'Emergency',
+  'Unpaid',
 ];
 
 export default function LeaveApplicationForm() {
@@ -145,7 +145,7 @@ export default function LeaveApplicationForm() {
             end_date: endDate.toISOString(),
             period,
             reason,
-            status: 'pending',
+            status: 'Pending',
             attachment_url: attachmentUrl,
           },
         ]);
@@ -178,7 +178,7 @@ export default function LeaveApplicationForm() {
             >
               <Picker.Item label="Choose leave type..." value="" />
               {LEAVE_TYPES.map((type) => (
-                <Picker.Item key={type.value} label={type.label} value={type.value} />
+                <Picker.Item key={type} label={type} value={type} />
               ))}
             </Picker>
           </View>

@@ -9,20 +9,20 @@ interface LeaveApplication {
   id: string;
   user_id: string;
   leave_type: string;
-  start_date: string;
-  end_date: string;
+  start_date: Date;
+  end_date: Date;
   period: string;
   reason: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'Pending' | 'Approved' | 'Rejected';
   created_at: string;
 }
 
 const LEAVE_TYPES = [
-  { label: 'All Types', value: '' },
-  { label: 'Annual', value: 'annual' },
-  { label: 'Medical', value: 'medical' },
-  { label: 'Emergency', value: 'emergency' },
-  { label: 'Unpaid', value: 'unpaid' },
+  'All',
+  'Annual',
+  'Medical',
+  'Emergency',
+  'Unpaid',
 ];
 
 export default function LeaveHistoryPage() {
@@ -49,7 +49,7 @@ export default function LeaveHistoryPage() {
         .gte('start_date', yearStart)
         .order('created_at', { ascending: false });
 
-      if (selectedType) {
+      if (selectedType && selectedType !== 'All') {
         query = query.eq('leave_type', selectedType);
       }
 
@@ -66,27 +66,23 @@ export default function LeaveHistoryPage() {
 
   function getStatusColor(status: string) {
     switch (status) {
-      case 'pending':
+      case 'Pending':
         return '#FF9800';
-      case 'approved':
+      case 'Approved':
         return '#4CAF50';
-      case 'rejected':
+      case 'Rejected':
         return '#F44336';
       default:
         return '#999';
     }
   }
 
-  function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  function formatDate(date: Date) {
+    return new Date(date).toLocaleDateString('en-US', {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
     });
-  }
-
-  function formatLeaveType(type: string): string {
-    return type.charAt(0).toUpperCase() + type.slice(1) + ' Leave';
   }
 
   return (
@@ -108,11 +104,7 @@ export default function LeaveHistoryPage() {
           style={styles.picker}
         >
           {LEAVE_TYPES.map((type) => (
-            <Picker.Item 
-              key={type.value} 
-              label={type.label} 
-              value={type.value}
-            />
+            <Picker.Item key={type} label={type} value={type} />
           ))}
         </Picker>
       </View>
@@ -122,7 +114,7 @@ export default function LeaveHistoryPage() {
           <View key={application.id} style={styles.applicationCard}>
             <View style={styles.cardHeader}>
               <Text style={styles.leaveType}>
-                {formatLeaveType(application.leave_type)}
+                {application.leave_type + ' Leave'}
               </Text>
               <View style={[
                 styles.statusBadge,
@@ -132,10 +124,10 @@ export default function LeaveHistoryPage() {
               </View>
             </View>
 
-            <View style={styles.dateContainer}>
+            <View>
               <Text style={styles.dateText}>
                 {formatDate(application.start_date)} - {formatDate(application.end_date)}
-                {' '}({application.period})
+                {' '}({application.period} days)
               </Text>
             </View>
 
@@ -192,8 +184,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
     elevation: 2,
+    paddingBottom: 5
   },
   cardHeader: {
     flexDirection: 'row',
@@ -202,7 +194,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   leaveType: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
     color: '#333',
   },
@@ -213,14 +205,11 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
   },
-  dateContainer: {
-    marginBottom: 8,
-  },
   dateText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
   },
   reasonText: {

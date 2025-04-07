@@ -1,208 +1,301 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '../../../supabase';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import Slider from '@react-native-community/slider';
-
-interface Question {
-  id: string;
-  question: string;
-  type: 'multiple_choice' | 'text' | 'rating';
-  options: string[] | null;
-}
+import { FontAwesome } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 
 interface Survey {
   id: string;
   title: string;
   description: string;
-  is_anonymous: boolean;
+  start_date: string;
+  end_date: string;
+  type: 'Rating' | 'Text';
 }
 
-export default function SurveyResponseScreen() {
+interface Question {
+  id: string;
+  survey_id: string;
+  question: string;
+  category?: string;
+}
+
+interface Response {
+  question_id: string;
+  response: string | number;
+}
+
+export default function SurveyDetailScreen() {
   const { id } = useLocalSearchParams();
-  const router = useRouter();
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [responses, setResponses] = useState<Record<string, any>>({});
+  const [responses, setResponses] = useState<Response[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  
+  // Group questions based on SURVEY type
+  const groupedQuestions = useMemo(() => {
+    if (!questions || questions.length === 0 || !survey?.type) return [];
+
+    if (survey.type === 'Rating') {
+      // Group ALL questions by category for Rating Surveys
+      const categoriesMap = new Map<string, Question[]>();
+      questions.forEach(q => {
+        const categoryKey = q.category || 'Uncategorized';
+        if (!categoriesMap.has(categoryKey)) {
+          categoriesMap.set(categoryKey, []);
+        }
+        categoriesMap.get(categoryKey)!.push(q);
+      });
+      return Array.from(categoriesMap.values()).filter(group => group.length > 0);
+    } else if (survey.type === 'Text') {
+      // Group ALL questions into pages of 5 for Text Surveys
+      const textGroups = [];
+      for (let i = 0; i < questions.length; i += 5) {
+        textGroups.push(questions.slice(i, i + 5));
+      }
+      return textGroups.filter(group => group.length > 0);
+    } else {
+      // Fallback or handle unknown survey type (e.g., show all)
+      // Simple pagination as fallback
+       const fallbackGroups = [];
+        for (let i = 0; i < questions.length; i += 5) {
+           fallbackGroups.push(questions.slice(i, i + 5));
+        }
+       return fallbackGroups.filter(group => group.length > 0);
+    }
+  }, [questions, survey?.type]); // Depend on questions and survey type
+  
+  // Calculate totalPages and currentQuestions based on the memoized groupedQuestions
+  const totalPages = groupedQuestions.length;
+  const currentQuestions = useMemo(() => {
+      // Ensure currentPage is within valid bounds
+      const pageIndex = Math.max(0, Math.min(currentPage, totalPages - 1));
+      return groupedQuestions[pageIndex] || [];
+  }, [groupedQuestions, currentPage, totalPages]);
+  const isLastPage = currentPage >= totalPages - 1;
+
+  // Reset currentPage if questions change and the current page becomes invalid
+  useEffect(() => {
+      if (currentPage >= totalPages && totalPages > 0) {
+          setCurrentPage(totalPages - 1);
+      } else if (totalPages === 0 && questions.length > 0) {
+          // If totalPages became 0 but we have questions, reset to 0
+          // This can happen briefly during loading/type change
+          setCurrentPage(0);
+      } else if (totalPages > 0 && currentPage < 0) {
+           setCurrentPage(0);
+      }
+  }, [totalPages, currentPage, questions]);
 
   useEffect(() => {
-    loadSurveyAndQuestions();
+    loadSurvey();
   }, [id]);
 
-  async function loadSurveyAndQuestions() {
+  async function loadSurvey() {
+    setLoading(true); // Ensure loading is true at the start
     try {
-      // Load survey details
+      // Load survey details (ensure 'type' is selected)
       const { data: surveyData, error: surveyError } = await supabase
         .from('surveys')
-        .select('*')
+        .select('id, title, description, start_date, end_date, type') // Explicitly select type
         .eq('id', id)
         .single();
 
       if (surveyError) throw surveyError;
       setSurvey(surveyData);
 
-      // Load questions
-      const { data: questionData, error: questionError } = await supabase
+      // Load questions (no change needed here)
+      const { data: questionsData, error: questionsError } = await supabase
         .from('survey_questions')
         .select('*')
         .eq('survey_id', id)
         .order('created_at', { ascending: true });
 
-      if (questionError) throw questionError;
-      setQuestions(questionData || []);
+      if (questionsError) throw questionsError;
+      setQuestions(questionsData);
 
-      // Initialize responses
-      const initialResponses: Record<string, any> = {};
-      questionData?.forEach((q: Question) => {
-        initialResponses[q.id] = q.type === 'rating' ? 3 : '';
-      });
+      // Initialize responses (consider survey type? No, based on question type)
+      const initialResponses = questionsData.map(q => ({
+        question_id: q.id,
+        response: surveyData.type === 'Rating' ? 0 : '' // Use survey type
+      }));
       setResponses(initialResponses);
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
+    } catch (error) {
+      console.error('Error loading survey:', error);
+      Alert.alert('Error', 'Failed to load survey details.');
+      router.back();
     } finally {
       setLoading(false);
     }
+  }
+
+  function updateResponse(questionId: string, value: string | number) {
+    setResponses(prev => 
+      prev.map(r => r.question_id === questionId ? { ...r, response: value } : r)
+    );
   }
 
   async function handleSubmit() {
     try {
       setSubmitting(true);
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Validate *all* responses before submitting
+      const allQuestionIds = questions.map(q => q.id);
+      const answeredQuestionIds = new Set(responses.map(r => r.question_id));
       
-      // Validate responses
-      const unansweredQuestions = questions.filter(q => {
-        const response = responses[q.id];
-        return response === '' || response === undefined;
+      const hasMissingResponses = allQuestionIds.some(qid => !answeredQuestionIds.has(qid));
+      const hasEmptyResponses = responses.some(r => {
+        const question = questions.find(q => q.id === r.question_id);
+        if (!question) return true; // Should not happen
+        if (survey?.type === 'Text') return String(r.response).trim() === '';
+        if (survey?.type === 'Rating') return r.response === 0; // Assuming 0 means unanswered
+        return true; // Default to invalid for unknown types
       });
 
-      if (unansweredQuestions.length > 0) {
-        Alert.alert('Error', 'Please answer all questions before submitting');
+      if (hasMissingResponses || hasEmptyResponses) {
+        Alert.alert('Error', 'Please answer all questions before submitting.');
+        setSubmitting(false); // Reset submitting state
         return;
       }
 
-      // Submit responses
-      const responsesToSubmit = questions.map(question => ({
+      // Insert responses (user_id logic might need adjustment based on survey anonymity later)
+      const responseData = responses.map(r => ({
         survey_id: id,
-        question_id: question.id,
-        user_id: survey?.is_anonymous ? null : user?.id,
-        response: responses[question.id],
+        question_id: r.question_id,
+        user_id: user.id, // Assuming non-anonymous for now
+        response: r.response
       }));
 
       const { error } = await supabase
         .from('survey_responses')
-        .insert(responsesToSubmit);
+        .insert(responseData);
 
       if (error) throw error;
 
-      Alert.alert('Success', 'Survey responses submitted successfully', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Success', 'Survey submitted successfully');
+      router.back();
+    } catch (error) {
+      console.error('Error submitting survey:', error);
+      Alert.alert('Error', 'Failed to submit survey. Please try again.');
     } finally {
       setSubmitting(false);
     }
   }
 
-  function renderQuestion(question: Question) {
-    switch (question.type) {
-      case 'multiple_choice':
-        return (
-          <View style={styles.optionsContainer}>
-            {question.options?.map((option, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.optionButton,
-                  responses[question.id] === option && styles.optionButtonSelected,
-                ]}
-                onPress={() => setResponses({ ...responses, [question.id]: option })}>
-                <Text
-                  style={[
-                    styles.optionText,
-                    responses[question.id] === option && styles.optionTextSelected,
-                  ]}>
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        );
-
-      case 'rating':
-        return (
-          <View style={styles.ratingContainer}>
-            <Slider
-              style={styles.slider}
-              minimumValue={1}
-              maximumValue={5}
-              step={1}
-              value={responses[question.id]}
-              onValueChange={(value) => setResponses({ ...responses, [question.id]: value })}
-              minimumTrackTintColor="#007AFF"
-              maximumTrackTintColor="#000000"
-            />
-            <Text style={styles.ratingValue}>{responses[question.id]}/5</Text>
-          </View>
-        );
-
-      case 'text':
-        return (
-          <TextInput
-            style={styles.textInput}
-            value={responses[question.id]}
-            onChangeText={(text) => setResponses({ ...responses, [question.id]: text })}
-            placeholder="Enter your response"
-            multiline
-            numberOfLines={4}
-          />
-        );
-    }
-  }
-
   if (loading) {
     return (
-      <View style={styles.container}>
-        <Text>Loading survey...</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6A1B9A" />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{survey?.title}</Text>
-          <Text style={styles.description}>{survey?.description}</Text>
-          {survey?.is_anonymous && (
-            <View style={styles.anonymousBanner}>
-              <Text style={styles.anonymousText}>
-                This survey is anonymous. Your responses will not be linked to your identity.
-              </Text>
-            </View>
-          )}
-        </View>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <FontAwesome name="arrow-left" size={20} color="#333" />
+        </TouchableOpacity>
+        <Text style={styles.title}>{survey?.title}</Text>
+      </View>
 
-        {questions.map((question, index) => (
-          <View key={question.id} style={styles.questionContainer}>
-            <Text style={styles.questionNumber}>Question {index + 1}</Text>
-            <Text style={styles.questionText}>{question.question}</Text>
-            {renderQuestion(question)}
+      <ScrollView style={styles.content}>
+        <Text style={styles.description}>{survey?.description}</Text>
+        
+        {/* Conditionally display Category Header only for Rating Surveys */}
+        {survey?.type === 'Rating' && currentQuestions.length > 0 && (
+          <View style={styles.categoryHeader}>
+            <Text style={styles.categoryTitle}>
+              Category: {currentQuestions[0].category || 'Uncategorized'}
+            </Text>
+          </View>
+        )}
+
+        {currentQuestions.map((question, index) => (
+          <View key={question.id} style={styles.questionCard}>
+            <Text style={styles.questionText}>
+              {(currentPage * 5) + index + 1}. {question.question}
+            </Text>
+
+            {survey?.type === 'Rating' && (
+              <View style={styles.ratingContainer}>
+                {['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'].map((option, rating) => {
+                  const isSelected = responses.find(r => r.question_id === question.id)?.response === rating + 1;
+                  return (
+                    <TouchableOpacity
+                      key={rating}
+                      style={[styles.ratingButton, isSelected && styles.selectedRating]}
+                      onPress={() => updateResponse(question.id, rating + 1)}
+                    >
+                      <View style={[styles.radioCircle, isSelected && styles.selectedRadioCircle]} />
+                      <Text style={[styles.ratingText, isSelected && styles.selectedRatingText]}>
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            {survey?.type === 'Text' && (
+              <TextInput
+                style={styles.textInput}
+                multiline
+                numberOfLines={4}
+                placeholder="Enter your answer..."
+                value={responses.find(r => r.question_id === question.id)?.response as string}
+                onChangeText={(text) => updateResponse(question.id, text)}
+              />
+            )}
           </View>
         ))}
 
-        <TouchableOpacity
-          style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={submitting}>
-          <Text style={styles.submitButtonText}>
-            {submitting ? 'Submitting...' : 'Submit Responses'}
+        {/* Navigation buttons for pagination */}
+        <View style={styles.navigationButtons}>
+          <TouchableOpacity 
+            onPress={() => setCurrentPage(currentPage - 1)} 
+            disabled={currentPage === 0}
+            style={[styles.navButton, currentPage === 0 && styles.disabledButton]}
+          >
+            <FontAwesome name="arrow-left" size={16} color={currentPage === 0 ? "#ccc" : "#333"} />
+            <Text style={[styles.navButtonText, currentPage === 0 && styles.disabledText]}>Back</Text>
+          </TouchableOpacity>
+          
+          <Text style={styles.pageIndicator}>
+            Page {currentPage + 1} of {totalPages}
           </Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          
+          <TouchableOpacity 
+            onPress={() => setCurrentPage(currentPage + 1)} 
+            disabled={isLastPage}
+            style={[styles.navButton, isLastPage && styles.disabledButton]}
+          >
+            <Text style={[styles.navButtonText, isLastPage && styles.disabledText]}>Next</Text>
+            <FontAwesome name="arrow-right" size={16} color={isLastPage ? "#ccc" : "#333"} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Submit button only on the last page */}
+        {isLastPage && totalPages > 0 && ( // Also check totalPages > 0
+          <TouchableOpacity
+            style={[styles.submitButton, submitting && styles.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.submitButtonText}>Submit Survey</Text>
+            )}
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -211,118 +304,165 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  content: {
-    padding: 20,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
     backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 16,
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    padding: 16,
   },
   description: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 15,
+    marginBottom: 20,
   },
-  anonymousBanner: {
-    backgroundColor: '#4CAF50',
-    padding: 10,
-    borderRadius: 8,
-  },
-  anonymousText: {
-    color: 'white',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  questionContainer: {
+  questionCard: {
     backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  questionNumber: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
   },
   questionText: {
     fontSize: 16,
     fontWeight: '500',
-    marginBottom: 15,
+    color: '#333',
+    marginBottom: 12,
   },
-  optionsContainer: {
+  // optionsContainer: {
+  //   gap: 8,
+  // },
+  // optionButton: {
+  //   borderWidth: 1,
+  //   borderColor: '#ddd',
+  //   borderRadius: 8,
+  //   padding: 12,
+  // },
+  // selectedOption: {
+  //   backgroundColor: '#6A1B9A',
+  //   borderColor: '#6A1B9A',
+  // },
+  // optionText: {
+  //   fontSize: 14,
+  //   color: '#333',
+  // },
+  // selectedOptionText: {
+  //   color: 'white',
+  // },
+  ratingContainer: {
+    marginTop: 12,
     gap: 10,
   },
-  optionButton: {
-    padding: 15,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-  },
-  optionButtonSelected: {
-    backgroundColor: '#007AFF',
-  },
-  optionText: {
-    color: '#007AFF',
-    textAlign: 'center',
-  },
-  optionTextSelected: {
-    color: 'white',
-  },
-  ratingContainer: {
+  ratingButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 8,
   },
-  slider: {
-    width: '100%',
-    height: 40,
+  selectedRating: {
   },
-  ratingValue: {
-    fontSize: 18,
-    fontWeight: '500',
-    marginTop: 10,
+  ratingText: {
+    fontSize: 16,
+    color: '#333',
+    marginLeft: 10,
+  },
+  selectedRatingText: {
+    color: '#6A1B9A',
+    fontWeight: '600',
+  },
+  radioCircle: {
+    height: 20,
+    width: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedRadioCircle: {
+    borderColor: '#6A1B9A',
+    backgroundColor: '#6A1B9A',
   },
   textInput: {
-    backgroundColor: '#f0f0f0',
-    padding: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
     borderRadius: 8,
-    minHeight: 100,
+    padding: 12,
+    fontSize: 14,
+    color: '#333',
     textAlignVertical: 'top',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
-    padding: 15,
+    backgroundColor: '#6A1B9A',
     borderRadius: 8,
+    padding: 16,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 8,
+    marginBottom: 24,
   },
-  submitButtonDisabled: {
-    backgroundColor: '#ccc',
+  buttonDisabled: {
+    backgroundColor: '#B39DDB',
   },
   submitButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
+  },
+  navigationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 0,
+    marginBottom: 20,
+  },
+  categoryHeader: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  categoryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  pageIndicator: {
+    fontSize: 14,
+    color: '#666',
+  },
+  navButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  disabledButton: {
+    backgroundColor: '#f5f5f5',
+  },
+  navButtonText: {
+    marginBottom: 0,
+    marginHorizontal: 4,
+    fontSize: 14,
+    color: '#333',
+  },
+  disabledText: {
+    color: '#ccc',
   },
 }); 
