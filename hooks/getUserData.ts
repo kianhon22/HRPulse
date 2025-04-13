@@ -12,6 +12,7 @@ export interface UserData {
   work_mode?: string;
   points?: string;
   phone?: string;
+  leave?: number;
   image_url?: string;
   join_company_date?: string;
   left_company_date?: string;
@@ -39,7 +40,7 @@ export function getUserData() {
         // Get the user profile data
         const { data, error: profileError } = await supabase
           .from('users')
-          .select('id, email, name, role, department, position, employment_type, work_mode, points, phone, image_url, join_company_date, left_company_date')
+          .select('*')
           .eq('id', user.id)
           .single();
 

@@ -98,7 +98,25 @@ export default function RootLayout() {
           options={{
             drawerLabel: 'Profile',
             drawerIcon: ({ color, size }: { color: string; size: number }) => (
-              <Ionicons name="person-outline" size={size} color={color} />
+              <Ionicons name="person" size={size} color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="calendar"
+          options={{
+            drawerLabel: 'Calendar',
+            drawerIcon: ({ color, size }: { color: string; size: number }) => (
+              <Ionicons name="calendar" size={size} color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
+          name="holiday"
+          options={{
+            drawerLabel: 'Holiday',
+            drawerIcon: ({ color, size }: { color: string; size: number }) => (
+              <Ionicons name="airplane" size={size} color={color} />
             ),
           }}
         />
@@ -107,7 +125,7 @@ export default function RootLayout() {
           options={{
             drawerLabel: 'Settings',
             drawerIcon: ({ color, size }: { color: string; size: number }) => (
-              <Ionicons name="settings-outline" size={size} color={color} />
+              <Ionicons name="settings" size={size} color={color} />
             ),
           }}
         />

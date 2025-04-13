@@ -11,8 +11,7 @@ interface Survey {
   title: string;
   type: string;
   description: string;
-  is_active: boolean;
-  is_editable: boolean;
+  status: string;
   start_date: Date;
   end_date: Date;
   created_at: string;
@@ -126,10 +125,6 @@ export default function SurveysScreen() {
 
   return (
     <View style={styles.container}>
-      {/* <View style={styles.header}>
-        <Text style={styles.title}>Surveys</Text>
-      </View> */}
-
       <ScrollView 
         style={styles.surveyList}
         refreshControl={
@@ -163,18 +158,22 @@ export default function SurveysScreen() {
                 <Text style={styles.surveyTitle}>{survey.title}</Text>
                 {survey.is_completed ? (
                   <View style={styles.completedBadge}>
-                    <Text style={styles.completedText}>Completed</Text>
+                    <Text style={styles.statusText}>Completed</Text>
+                  </View>
+                ) : (survey.status == 'Ended' ? (
+                  <View style={styles.endedBadge}>
+                    <Text style={styles.statusText}>Ended</Text>
                   </View>
                 ) : (
                   <View style={styles.notCompletedBadge}>
-                    <Text style={styles.notCompletedText}>Not Completed</Text>
+                    <Text style={styles.statusText}>Not Completed</Text>
                   </View>
-                )}
+                ))}
               </View>
 
-              <Text style={styles.surveyDescription} numberOfLines={2}>
-                {survey.description}
-              </Text>
+              {survey?.description &&
+                <Text style={styles.surveyDescription} numberOfLines={2}>{survey.description} </Text>
+              }
 
               <View style={styles.cardFooter}>
                 <Text style={styles.dateText}>
@@ -283,16 +282,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#999',
   },
+  statusText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
   completedBadge: {
     backgroundColor: '#4CAF50',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  completedText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '500',
+  endedBadge: {
+    backgroundColor: '#e64747',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   notCompletedBadge: {
     backgroundColor: '#FF9800',
@@ -300,24 +305,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
-  notCompletedText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  // anonymousBadge: {
-  //   flexDirection: 'row',
-  //   alignItems: 'center',
-  //   backgroundColor: '#f0f0f0',
-  //   paddingHorizontal: 8,
-  //   paddingVertical: 4,
-  //   borderRadius: 12,
-  // },
-  // anonymousText: {
-  //   color: '#666',
-  //   fontSize: 12,
-  //   marginLeft: 4,
-  // },
   buttonContainer: {
     marginTop: 10,
   },
@@ -337,4 +324,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
   },
+    // anonymousBadge: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   backgroundColor: '#f0f0f0',
+  //   paddingHorizontal: 8,
+  //   paddingVertical: 4,
+  //   borderRadius: 12,
+  // },
+  // anonymousText: {
+  //   color: '#666',
+  //   fontSize: 12,
+  //   marginLeft: 4,
+  // },
 }); 

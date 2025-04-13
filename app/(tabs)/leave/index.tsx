@@ -89,7 +89,7 @@ export default function LeaveHistoryPage() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Application History</Text>
-        <Link href="../apply" asChild>
+        <Link href="leave/apply" asChild>
           <TouchableOpacity style={styles.applyButton}>
             <FontAwesome name="plus" size={14} color="white" style={styles.plusIcon} />
             <Text style={styles.applyButtonText}>Take Leave</Text>
@@ -127,7 +127,7 @@ export default function LeaveHistoryPage() {
             <View>
               <Text style={styles.dateText}>
                 {formatDate(application.start_date)} - {formatDate(application.end_date)}
-                {' '}({application.period} days)
+                {' '}({application.period} day)
               </Text>
             </View>
 
@@ -185,7 +185,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     elevation: 2,
-    paddingBottom: 5
+    paddingBottom: 5,
+    marginBottom: 15,
   },
   cardHeader: {
     flexDirection: 'row',

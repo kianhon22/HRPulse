@@ -1,4 +1,3 @@
-// hrpulse/app/components/HomeHeader.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,24 +5,31 @@ import { getUserData } from '../hooks/getUserData';
 
 const HomeHeader: React.FC = () => {
   const { userData, loading } = getUserData();
+  const [currentDate, setCurrentDate] = useState('');
   const [currentTime, setCurrentTime] = useState('');
   const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
-    // Update time initially and every minute
     const updateDateTime = () => {
       const now = new Date();
-      const options: Intl.DateTimeFormatOptions = {
+
+      // Format: Sun, Apr 13
+      const dateOptions: Intl.DateTimeFormatOptions = {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
+      };
+      setCurrentDate(now.toLocaleDateString('en-US', dateOptions));
+
+      // Format: 11:08 PM
+      const timeOptions: Intl.DateTimeFormatOptions = {
         hour: 'numeric',
         minute: '2-digit',
-        hour12: true
+        hour12: true,
       };
-      setCurrentTime(now.toLocaleString('en-US', options));
+      setCurrentTime(now.toLocaleTimeString('en-US', timeOptions));
 
-      // Set greeting based on time of day
+      // Greeting
       const hours = now.getHours();
       if (hours >= 2 && hours < 12) {
         setGreeting('Good morning');
@@ -37,7 +43,7 @@ const HomeHeader: React.FC = () => {
     };
 
     updateDateTime();
-    const intervalId = setInterval(updateDateTime, 60000); // Update every minute
+    const intervalId = setInterval(updateDateTime, 60000);
 
     return () => clearInterval(intervalId);
   }, []);
@@ -46,29 +52,29 @@ const HomeHeader: React.FC = () => {
 
   return (
     <View style={styles.headerContainer}>
-      <Text style={styles.timeText}>{currentTime}</Text>
-      
-      <View style={styles.userInfoContainer}>
-        <View style={styles.avatarContainer}>
-          {userData?.image_url ? (
-            <Image 
-              source={{ uri: userData.image_url }} 
-              style={styles.avatar} 
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={40} color="#6A1B9A" />
+      <View style={styles.rowContainer}>
+
+        <View style={styles.leftContainer}>
+          <View style={styles.userInfoContainer}>
+            <View style={styles.avatarContainer}>
+              {userData?.image_url ? (
+                <Image source={{ uri: userData.image_url }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="person" size={40} color="#6A1B9A" />
+                </View>
+              )}
             </View>
-          )}
+            <View style={styles.greetingContainer}>
+              <Text style={styles.greeting}>{greeting},</Text>
+              <Text style={styles.userName}>{displayName}</Text>
+            </View>
+          </View>
         </View>
-        
-        <View style={styles.greetingContainer}>
-          <Text style={styles.greeting}>
-            {greeting},
-          </Text>
-          <Text style={styles.userName}>
-            {displayName}
-          </Text>
+
+        <View style={styles.rightContainer}>
+          <Text style={styles.dateText}>{currentDate}</Text>
+          <Text style={styles.timeText}>{currentTime}</Text>
         </View>
       </View>
     </View>
@@ -78,16 +84,34 @@ const HomeHeader: React.FC = () => {
 const styles = StyleSheet.create({
   headerContainer: {
     backgroundColor: '#6A1B9A',
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
   },
+  rowContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  leftContainer: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  rightContainer: {
+    alignItems: 'flex-end',
+    marginRight: 50,
+  },
+  dateText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '500',
+    marginBottom: 5,
+  },
   timeText: {
     color: 'white',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 15,
-    fontWeight: '500',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   userInfoContainer: {
     flexDirection: 'row',

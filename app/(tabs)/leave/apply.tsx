@@ -41,7 +41,8 @@ export default function LeaveApplicationForm() {
   const calculateDays = (start: Date, end: Date) => {
     const oneDay = 24 * 60 * 60 * 1000;
     const diffDays = Math.round(Math.abs((end.getTime() - start.getTime()) / oneDay)) + 1;
-    return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
+    return `${diffDays} `;
+    // return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
   };
 
   const handleDateChange = (event: any, selectedDate: Date | undefined, isStart: boolean) => {
@@ -133,7 +134,7 @@ export default function LeaveApplicationForm() {
       const period = calculateDays(startDate, endDate);
       
       // Upload attachment if exists
-      const attachmentUrl = await uploadAttachment(user.id);
+      // const attachmentUrl = await uploadAttachment(user.id);
 
       const { error } = await supabase
         .from('leaves')
@@ -146,7 +147,7 @@ export default function LeaveApplicationForm() {
             period,
             reason,
             status: 'Pending',
-            attachment_url: attachmentUrl,
+            // attachment_url: attachmentUrl,
           },
         ]);
 
@@ -219,7 +220,7 @@ export default function LeaveApplicationForm() {
           )}
 
           <Text style={styles.periodText}>
-            Period: {calculateDays(startDate, endDate)}
+            Period: {calculateDays(startDate, endDate)} day
           </Text>
         </View>
 

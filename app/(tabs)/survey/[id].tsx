@@ -34,6 +34,8 @@ export default function SurveyDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [userResponses, setUserResponses] = useState<Record<string, string | number>>({});
   
   // Group questions based on SURVEY type
   const groupedQuestions = useMemo(() => {
@@ -94,20 +96,60 @@ export default function SurveyDetailScreen() {
     loadSurvey();
   }, [id]);
 
+  const sentimentAnalysis = async (response: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("sentiment-analysis", {
+        body: {
+          inputs: response,
+        },
+      });
+      
+      if (error) throw error;
+      console.log("Sentiment result:", data);
+      
+      if (data && Array.isArray(data) && data.length > 0) {
+        // Flatten all results into a single array
+        const allResults = data.flatMap(result => 
+          result.map((item: { label: string; score: number }) => ({ label: item.label, score: item.score }))
+        );
+        
+        // Find the result with the highest score
+        const topResult = allResults.reduce((prev, current) => 
+          (current.score > prev.score) ? current : prev
+        , allResults[0]);
+        
+        // Return the structured sentiment data
+        return {
+          top_label: topResult.label,
+          top_score: topResult.score,
+          all: allResults
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error("Error in sentiment analysis:", err);
+      return null;
+    }
+  }
+
   async function loadSurvey() {
     setLoading(true); // Ensure loading is true at the start
     try {
-      // Load survey details (ensure 'type' is selected)
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Load survey details
       const { data: surveyData, error: surveyError } = await supabase
         .from('surveys')
-        .select('id, title, description, start_date, end_date, type') // Explicitly select type
+        .select('id, title, description, start_date, end_date, type')
         .eq('id', id)
         .single();
 
       if (surveyError) throw surveyError;
       setSurvey(surveyData);
 
-      // Load questions (no change needed here)
+      // Load questions
       const { data: questionsData, error: questionsError } = await supabase
         .from('survey_questions')
         .select('*')
@@ -117,12 +159,40 @@ export default function SurveyDetailScreen() {
       if (questionsError) throw questionsError;
       setQuestions(questionsData);
 
-      // Initialize responses (consider survey type? No, based on question type)
-      const initialResponses = questionsData.map(q => ({
-        question_id: q.id,
-        response: surveyData.type === 'Rating' ? 0 : '' // Use survey type
-      }));
-      setResponses(initialResponses);
+      // Check if user has completed this survey
+      const { data: responseData, error: responseError } = await supabase
+        .from('survey_responses')
+        .select('question_id, response')
+        .eq('survey_id', id)
+        .eq('user_id', user.id);
+        
+      if (responseError) throw responseError;
+      
+      if (responseData && responseData.length > 0) {
+        setIsCompleted(true);
+        
+        // Transform responses into a map for easy lookup
+        const responsesMap: Record<string, string | number> = {};
+        responseData.forEach(item => {
+          responsesMap[item.question_id] = item.response;
+        });
+        
+        setUserResponses(responsesMap);
+        
+        // Initialize responses with user's previous responses
+        setResponses(questionsData.map(q => ({
+          question_id: q.id,
+          response: responsesMap[q.id] !== undefined ? responsesMap[q.id] : (surveyData.type === 'Rating' ? 0 : '')
+        })));
+      } else {
+        setIsCompleted(false);
+        
+        // Initialize empty responses
+        setResponses(questionsData.map(q => ({
+          question_id: q.id,
+          response: surveyData.type === 'Rating' ? 0 : ''
+        })));
+      }
     } catch (error) {
       console.error('Error loading survey:', error);
       Alert.alert('Error', 'Failed to load survey details.');
@@ -163,14 +233,39 @@ export default function SurveyDetailScreen() {
         return;
       }
 
-      // Insert responses (user_id logic might need adjustment based on survey anonymity later)
-      const responseData = responses.map(r => ({
-        survey_id: id,
-        question_id: r.question_id,
-        user_id: user.id, // Assuming non-anonymous for now
-        response: r.response
-      }));
+      // For Text surveys, perform sentiment analysis on each response
+      let responseData = [];
+      
+      if (survey?.type === 'Text') {
+        // Process text responses with sentiment analysis
+        for (const r of responses) {
+          const responseText = String(r.response).trim();
+          let sentimentData = null;
+          
+          if (responseText) {
+            // Run sentiment analysis on this text response
+            sentimentData = await sentimentAnalysis(responseText);
+          }
+          
+          responseData.push({
+            survey_id: id,
+            question_id: r.question_id,
+            user_id: user.id,
+            response: r.response,
+            sentiment: sentimentData
+          });
+        }
+      } else {
+        // For Rating surveys, no sentiment analysis needed
+        responseData = responses.map(r => ({
+          survey_id: id,
+          question_id: r.question_id,
+          user_id: user.id,
+          response: r.response
+        }));
+      }
 
+      // Insert all responses with sentiment data if applicable
       const { error } = await supabase
         .from('survey_responses')
         .insert(responseData);
@@ -205,13 +300,14 @@ export default function SurveyDetailScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        <Text style={styles.description}>{survey?.description}</Text>
+        {survey?.description && (
+          <Text style={styles.description}>{survey?.description}</Text>
+        )}
         
-        {/* Conditionally display Category Header only for Rating Surveys */}
-        {survey?.type === 'Rating' && currentQuestions.length > 0 && (
+        {currentQuestions.length > 0 && (
           <View style={styles.categoryHeader}>
             <Text style={styles.categoryTitle}>
-              Category: {currentQuestions[0].category || 'Uncategorized'}
+              {`Category: ${currentQuestions[0].category || 'Uncategorized'}`}
             </Text>
           </View>
         )}
@@ -230,7 +326,8 @@ export default function SurveyDetailScreen() {
                     <TouchableOpacity
                       key={rating}
                       style={[styles.ratingButton, isSelected && styles.selectedRating]}
-                      onPress={() => updateResponse(question.id, rating + 1)}
+                      onPress={() => !isCompleted && updateResponse(question.id, rating + 1)}
+                      disabled={isCompleted}
                     >
                       <View style={[styles.radioCircle, isSelected && styles.selectedRadioCircle]} />
                       <Text style={[styles.ratingText, isSelected && styles.selectedRatingText]}>
@@ -244,12 +341,14 @@ export default function SurveyDetailScreen() {
 
             {survey?.type === 'Text' && (
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, isCompleted && styles.readonlyInput]}
                 multiline
                 numberOfLines={4}
-                placeholder="Enter your answer..."
+                placeholder="Enter your answer here..."
+                placeholderTextColor="#999"
                 value={responses.find(r => r.question_id === question.id)?.response as string}
                 onChangeText={(text) => updateResponse(question.id, text)}
+                editable={!isCompleted}
               />
             )}
           </View>
@@ -281,7 +380,7 @@ export default function SurveyDetailScreen() {
         </View>
 
         {/* Submit button only on the last page */}
-        {isLastPage && totalPages > 0 && ( // Also check totalPages > 0
+        {isLastPage && totalPages > 0 && !isCompleted && (
           <TouchableOpacity
             style={[styles.submitButton, submitting && styles.buttonDisabled]}
             onPress={handleSubmit}
@@ -331,7 +430,7 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   questionCard: {
     backgroundColor: 'white',
@@ -401,12 +500,15 @@ const styles = StyleSheet.create({
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
     color: '#333',
     textAlignVertical: 'top',
+    minHeight: 60,
+    marginTop: 10,
   },
   submitButton: {
     backgroundColor: '#6A1B9A',
@@ -432,7 +534,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   categoryHeader: {
-    marginBottom: 16,
     padding: 12,
     backgroundColor: '#f0f0f0',
     borderRadius: 8,
@@ -464,5 +565,10 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     color: '#ccc',
+  },
+  readonlyInput: {
+    backgroundColor: '#f9f9f9',
+    borderColor: '#eee',
+    color: '#666',
   },
 }); 
