@@ -3,7 +3,12 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getUserData } from '../hooks/getUserData';
 
-const HomeHeader: React.FC = () => {
+interface HomeHeaderProps {
+  userName?: string;
+  userPoints?: number;
+}
+
+const HomeHeader: React.FC<HomeHeaderProps> = ({ userName, userPoints }) => {
   const { userData, loading } = getUserData();
   const [currentDate, setCurrentDate] = useState('');
   const [currentTime, setCurrentTime] = useState('');
@@ -48,7 +53,7 @@ const HomeHeader: React.FC = () => {
     return () => clearInterval(intervalId);
   }, []);
 
-  const displayName = userData?.name || userData?.email?.split('@')[0] || 'User';
+  const displayName = userName || userData?.name || userData?.email?.split('@')[0] || 'User';
 
   return (
     <View style={styles.headerContainer}>

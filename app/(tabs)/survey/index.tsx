@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { Link, router } from 'expo-router';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { router } from 'expo-router';
 import { supabase } from '../../../supabase';
 import { FontAwesome } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { RealtimeChannel } from '@supabase/supabase-js';
+import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
+import RefreshWrapper from '../../../components/RefreshWrapper';
 
 interface Survey {
   id: string;
@@ -22,14 +23,23 @@ interface Survey {
 export default function SurveysScreen() {
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const loadSurveysCallback = useCallback(async () => {
+  // Get user ID on mount
+  useEffect(() => {
+    const getUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setUserId(user.id);
+    };
+    getUserId();
+  }, []);
+
+  // Memoize load function to prevent re-creation
+  const loadSurveys = useCallback(async () => {
+    if (!userId) return;
+    
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const currentYear = new Date().getFullYear();
       const startOfYear = new Date(currentYear, 0, 1).toISOString();
       const today = new Date().toISOString();
@@ -46,16 +56,11 @@ export default function SurveysScreen() {
       const { data: completedSurveys, error: completedError } = await supabase
         .from('survey_responses')
         .select('survey_id')
-        .eq('user_id', user.id)
-        .then(response => {
-          if (response.error) throw response.error;
-          const completedIds = new Set(response.data.map(s => s.survey_id));
-          return { data: Array.from(completedIds), error: null };
-        });
+        .eq('user_id', userId);
 
       if (completedError) throw completedError;
 
-      const completedIdsSet = new Set(completedSurveys || []);
+      const completedIdsSet = new Set(completedSurveys?.map(s => s.survey_id) || []);
 
       const allSurveys = activeSurveys?.map(survey => ({
         ...survey,
@@ -68,54 +73,57 @@ export default function SurveysScreen() {
       console.error('Error loading surveys:', error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  }, []);
+  }, [userId]);
 
+  // Stable callbacks for realtime updates
+  const handleSurveyChange = useCallback(() => {
+    loadSurveys();
+  }, [loadSurveys]);
+  
+  const handleResponseChange = useCallback(() => {
+    loadSurveys();
+  }, [loadSurveys]);
+
+  // Set up real-time subscriptions
+  useSupabaseRealtime(
+    'surveys',
+    '*',
+    undefined,
+    undefined,
+    handleSurveyChange
+  );
+
+  useSupabaseRealtime(
+    'survey_responses',
+    '*',
+    'user_id',
+    userId || undefined,
+    handleResponseChange
+  );
+
+  // Load initial data
   useEffect(() => {
-    loadSurveysCallback();
+    if (userId) {
+      loadSurveys();
+    }
+  }, [userId, loadSurveys]);
 
-    const channel = supabase
-      .channel('public:surveys')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'surveys' }, payload => {
-        console.log('Change received!', payload);
-        loadSurveysCallback();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'survey_responses' }, payload => {
-        console.log('Response change received!', payload);
-        loadSurveysCallback();
-      })
-      .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Subscribed to surveys channel!');
-        }
-        if (status === 'CHANNEL_ERROR') {
-          console.error('Subscription Error:', err);
-        }
-        if (status === 'TIMED_OUT') {
-          console.warn('Subscription timed out.');
-        }
-      });
+  // Handle refresh
+  const handleRefresh = useCallback(async () => {
+    await loadSurveys();
+  }, [loadSurveys]);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [loadSurveysCallback]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadSurveysCallback();
-  }, [loadSurveysCallback]);
-
-  function formatDate(date: Date) {
+  // Format date helper
+  const formatDate = useCallback((date: Date) => {
     return new Date(date).toLocaleDateString('en-US', {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
     });
-  }
+  }, []);
 
-  if (loading && !refreshing) {
+  if (loading && surveys.length === 0) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6A1B9A" />
@@ -125,89 +133,77 @@ export default function SurveysScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView 
-        style={styles.surveyList}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {surveys.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <FontAwesome name="clipboard" size={50} color="#ccc" />
-            <Text style={styles.emptyText}>No surveys available at the moment</Text>
-          </View>
-        ) : (
-          surveys.map((survey) => (
-            <TouchableOpacity
-              key={survey.id}
-              style={styles.surveyCard}
-              onPress={() => {
-                if (survey.is_completed) {
+      <RefreshWrapper onRefresh={handleRefresh}>
+        <View style={styles.surveyList}>
+          {surveys.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <FontAwesome name="clipboard" size={50} color="#ccc" />
+              <Text style={styles.emptyText}>No surveys available at the moment</Text>
+            </View>
+          ) : (
+            surveys.map((survey) => (
+              <TouchableOpacity
+                key={survey.id}
+                style={styles.surveyCard}
+                onPress={() => {
                   router.push(`/survey/${survey.id}`);
-                } else if (survey.is_within_date) {
-                  // Start Now button
-                  router.push(`/survey/${survey.id}`);
-                } else {
-                  // View button
-                  router.push(`/survey/${survey.id}`);
-                }
-              }}
-              disabled={survey.is_completed || !survey.is_within_date}
-            >
-              <View style={styles.cardHeader}>
-                <Text style={styles.surveyTitle}>{survey.title}</Text>
-                {survey.is_completed ? (
-                  <View style={styles.completedBadge}>
-                    <Text style={styles.statusText}>Completed</Text>
-                  </View>
-                ) : (survey.status == 'Ended' ? (
-                  <View style={styles.endedBadge}>
-                    <Text style={styles.statusText}>Ended</Text>
-                  </View>
-                ) : (
-                  <View style={styles.notCompletedBadge}>
-                    <Text style={styles.statusText}>Not Completed</Text>
-                  </View>
-                ))}
-              </View>
-
-              {survey?.description &&
-                <Text style={styles.surveyDescription} numberOfLines={2}>{survey.description} </Text>
-              }
-
-              <View style={styles.cardFooter}>
-                <Text style={styles.dateText}>
-                  {format(new Date(survey.start_date), 'MMM dd, yyyy')} - {format(new Date(survey.end_date), 'MMM dd, yyyy')}
-                </Text>
-                <View style={styles.buttonContainer}>
+                }}
+              >
+                <View style={styles.cardHeader}>
+                  <Text style={styles.surveyTitle}>{survey.title}</Text>
                   {survey.is_completed ? (
-                    <TouchableOpacity 
-                      style={styles.viewButton}
-                      onPress={() => router.push(`/survey/${survey.id}`)}
-                    >
-                      <Text style={styles.buttonText}>View</Text>
-                    </TouchableOpacity>
-                  ) : survey.is_within_date ? (
-                    <TouchableOpacity 
-                      style={styles.startButton}
-                      onPress={() => router.push(`/survey/${survey.id}`)}
-                    >
-                      <Text style={styles.buttonText}>Start Now</Text>
-                    </TouchableOpacity>
+                    <View style={styles.completedBadge}>
+                      <Text style={styles.statusText}>Completed</Text>
+                    </View>
+                  ) : (survey.status == 'Ended' ? (
+                    <View style={styles.endedBadge}>
+                      <Text style={styles.statusText}>Ended</Text>
+                    </View>
                   ) : (
-                    <TouchableOpacity 
-                      style={styles.viewButton}
-                      onPress={() => router.push(`/survey/${survey.id}`)}
-                    >
-                      <Text style={styles.buttonText}>View</Text>
-                    </TouchableOpacity>
-                  )}
+                    <View style={styles.notCompletedBadge}>
+                      <Text style={styles.statusText}>Not Completed</Text>
+                    </View>
+                  ))}
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
-      </ScrollView>
+
+                {survey?.description &&
+                  <Text style={styles.surveyDescription} numberOfLines={2}>{survey.description} </Text>
+                }
+
+                <View style={styles.cardFooter}>
+                  <Text style={styles.dateText}>
+                    {format(new Date(survey.start_date), 'MMM dd, yyyy')} - {format(new Date(survey.end_date), 'MMM dd, yyyy')}
+                  </Text>
+                  <View style={styles.buttonContainer}>
+                    {survey.is_completed ? (
+                      <TouchableOpacity 
+                        style={styles.viewButton}
+                        onPress={() => router.push(`/survey/${survey.id}`)}
+                      >
+                        <Text style={styles.buttonText}>View</Text>
+                      </TouchableOpacity>
+                    ) : survey.is_within_date ? (
+                      <TouchableOpacity 
+                        style={styles.startButton}
+                        onPress={() => router.push(`/survey/${survey.id}`)}
+                      >
+                        <Text style={styles.buttonText}>Start Now</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity 
+                        style={styles.viewButton}
+                        onPress={() => router.push(`/survey/${survey.id}`)}
+                      >
+                        <Text style={styles.buttonText}>View</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      </RefreshWrapper>
     </View>
   );
 }

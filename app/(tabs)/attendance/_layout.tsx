@@ -7,7 +7,7 @@ export default function AttendanceLayout() {
       <Stack.Screen
         name="index"
         options={{
-          header: () => <Header title="Attendance Record" />,
+          header: () => <Header title="Attendances" />,
         }}
       />
     </Stack>

@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Link } from 'expo-router';
 import { supabase } from '../../../supabase';
 import { FontAwesome } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
+import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
+import RefreshWrapper from '../../../components/RefreshWrapper';
 
 interface LeaveApplication {
   id: string;
@@ -29,23 +31,30 @@ export default function LeaveHistoryPage() {
   const [applications, setApplications] = useState<LeaveApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
 
+  // Get user ID on component mount
   useEffect(() => {
-    loadLeaveApplications();
-  }, [selectedType]);
-
-  async function loadLeaveApplications() {
-    try {
+    const getUserId = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (user) setUserId(user.id);
+    };
+    getUserId();
+  }, []);
 
+  // Memoize the loadLeaveApplications function to prevent unnecessary re-creation
+  const loadLeaveApplications = useCallback(async () => {
+    if (!userId) return;
+    
+    try {
+      setLoading(true);
       const currentYear = new Date().getFullYear();
       const yearStart = `${currentYear}-01-01`;
 
       let query = supabase
         .from('leaves')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .gte('start_date', yearStart)
         .order('created_at', { ascending: false });
 
@@ -62,7 +71,33 @@ export default function LeaveHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [userId, selectedType]);
+
+  // Use a stable callback function for real-time updates
+  const handleLeaveChange = useCallback(() => {
+    loadLeaveApplications();
+  }, [loadLeaveApplications]);
+
+  // Set up real-time subscription
+  useSupabaseRealtime(
+    'leaves',
+    '*',
+    'user_id',
+    userId || undefined,
+    handleLeaveChange
+  );
+
+  // Load initial data when userId or selectedType changes
+  useEffect(() => {
+    if (userId) {
+      loadLeaveApplications();
+    }
+  }, [userId, loadLeaveApplications]);
+
+  // Handle refresh
+  const handleRefresh = useCallback(async () => {
+    await loadLeaveApplications();
+  }, [loadLeaveApplications]);
 
   function getStatusColor(status: string) {
     switch (status) {
@@ -89,7 +124,7 @@ export default function LeaveHistoryPage() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Application History</Text>
-        <Link href="leave/apply" asChild>
+        <Link href="/leave/apply" asChild>
           <TouchableOpacity style={styles.applyButton}>
             <FontAwesome name="plus" size={14} color="white" style={styles.plusIcon} />
             <Text style={styles.applyButtonText}>Take Leave</Text>
@@ -109,34 +144,36 @@ export default function LeaveHistoryPage() {
         </Picker>
       </View>
 
-      <ScrollView style={styles.applicationsList}>
-        {applications.map((application) => (
-          <View key={application.id} style={styles.applicationCard}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.leaveType}>
-                {application.leave_type + ' Leave'}
-              </Text>
-              <View style={[
-                styles.statusBadge,
-                { backgroundColor: getStatusColor(application.status) }
-              ]}>
-                <Text style={styles.statusText}>{application.status}</Text>
+      <RefreshWrapper onRefresh={handleRefresh}>
+        <View style={styles.applicationsList}>
+          {applications.map((application) => (
+            <View key={application.id} style={styles.applicationCard}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.leaveType}>
+                  {application.leave_type + ' Leave'}
+                </Text>
+                <View style={[
+                  styles.statusBadge,
+                  { backgroundColor: getStatusColor(application.status) }
+                ]}>
+                  <Text style={styles.statusText}>{application.status}</Text>
+                </View>
               </View>
-            </View>
 
-            <View>
-              <Text style={styles.dateText}>
-                {formatDate(application.start_date)} - {formatDate(application.end_date)}
-                {' '}({application.period} day)
+              <View>
+                <Text style={styles.dateText}>
+                  {formatDate(application.start_date)} - {formatDate(application.end_date)}
+                  {' '}({application.period} day)
+                </Text>
+              </View>
+
+              <Text style={styles.reasonText} numberOfLines={2}>
+                {application.reason}
               </Text>
             </View>
-
-            <Text style={styles.reasonText} numberOfLines={2}>
-              {application.reason}
-            </Text>
-          </View>
-        ))}
-      </ScrollView>
+          ))}
+        </View>
+      </RefreshWrapper>
     </View>
   );
 }
@@ -200,29 +237,30 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   statusBadge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   statusText: {
     color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
   },
   dateText: {
     fontSize: 16,
-    color: '#666',
+    color: '#555',
+    marginBottom: 12,
   },
   reasonText: {
     fontSize: 14,
     color: '#666',
-    fontStyle: 'italic',
+    marginTop: 5,
   },
   filterContainer: {
     backgroundColor: 'white',
-    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    paddingHorizontal: 16,
   },
   picker: {
     height: 50,

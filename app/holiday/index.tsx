@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -12,6 +12,7 @@ import {
 import { FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '../../supabase';
 import { format, parseISO } from 'date-fns';
+import RefreshWrapper from '../../components/RefreshWrapper';
 
 interface Holiday {
   id: string;
@@ -27,24 +28,8 @@ export default function HolidayScreen() {
   const [error, setError] = useState<string | null>(null);
   const [year, setYear] = useState(new Date().getFullYear());
 
-  useEffect(() => {
-    fetchHolidays();
-  }, [year]);
-
-  const fetchHolidays = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      await fetchHolidaysFromAPI();      
-    } catch (err) {
-      console.error('Error fetching holidays:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchHolidaysFromAPI = async () => {
+  // Memoize fetching functions
+  const fetchHolidaysFromAPI = useCallback(async () => {
     try {
       const response = await fetch(`https://calendarific.com/api/v2/holidays?&api_key=n1xP6cmnJwfCYwAXvqyI8HSaITShLRwq&country=MY&year=${year}`);
       const json = await response.json();
@@ -66,122 +51,40 @@ export default function HolidayScreen() {
       console.error('Error fetching holidays from Calendarific API:', err);
       setError('Unable to load holidays. Please try again later.');
     }
-  };
+  }, [year]);
   
-  const mapType = (types: string[]): Holiday['type'] => {
+  const fetchHolidays = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      await fetchHolidaysFromAPI();      
+    } catch (err) {
+      console.error('Error fetching holidays:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchHolidaysFromAPI]);
+
+  // Load holidays when year changes
+  useEffect(() => {
+    fetchHolidays();
+  }, [year, fetchHolidays]);
+
+  // Handle pull-to-refresh
+  const handleRefresh = useCallback(async () => {
+    await fetchHolidays();
+  }, [fetchHolidays]);
+  
+  // Helper functions
+  const mapType = useCallback((types: string[]): Holiday['type'] => {
     if (types.includes('National holiday')) return 'National';
     if (types.includes('Religious')) return 'Religious';
     if (types.includes('Local holiday')) return 'State';
     return 'Other';
-  };
+  }, []);
   
-  // const fetchHolidaysFromAPI = async () => {
-  //   try {
-  //     const staticHolidays: Holiday[] = [
-  //       {
-  //         id: '1',
-  //         name: 'New Year\'s Day',
-  //         date: `${year}-01-01`,
-  //         type: 'National',
-  //         description: 'The first day of the year in the Gregorian calendar.'
-  //       },
-  //       {
-  //         id: '2',
-  //         name: 'Chinese New Year',
-  //         date: `${year}-02-10`,
-  //         type: 'National',
-  //         description: 'Chinese Lunar New Year celebration.'
-  //       },
-  //       {
-  //         id: '3',
-  //         name: 'Federal Territory Day',
-  //         date: `${year}-02-01`,
-  //         type: 'State',
-  //         description: 'Celebration for the establishment of the Federal Territories.'
-  //       },
-  //       {
-  //         id: '4',
-  //         name: 'Thaipusam',
-  //         date: `${year}-01-25`,
-  //         type: 'Religious',
-  //         description: 'Hindu festival celebrated during the full moon in the Tamil month of Thai.'
-  //       },
-  //       {
-  //         id: '5',
-  //         name: 'Labour Day',
-  //         date: `${year}-05-01`,
-  //         type: 'National',
-  //         description: 'International celebration of the achievements of workers.'
-  //       },
-  //       {
-  //         id: '6',
-  //         name: 'Wesak Day',
-  //         date: `${year}-05-22`,
-  //         type: 'Religious',
-  //         description: 'Buddhist festival that commemorates the birth, enlightenment, and death of Gautama Buddha.'
-  //       },
-  //       {
-  //         id: '7',
-  //         name: 'Hari Raya Puasa',
-  //         date: `${year}-04-10`,
-  //         type: 'Religious',
-  //         description: 'Muslim festival marking the end of Ramadan.'
-  //       },
-  //       {
-  //         id: '8',
-  //         name: 'Agong\'s Birthday',
-  //         date: `${year}-06-03`,
-  //         type: 'National',
-  //         description: 'Official birthday celebration of the Yang di-Pertuan Agong of Malaysia.'
-  //       },
-  //       {
-  //         id: '9',
-  //         name: 'Hari Raya Haji',
-  //         date: `${year}-06-17`,
-  //         type: 'Religious',
-  //         description: 'Islamic festival of sacrifice.'
-  //       },
-  //       {
-  //         id: '10',
-  //         name: 'National Day',
-  //         date: `${year}-08-31`,
-  //         type: 'National',
-  //         description: 'Celebration of Malaysia\'s independence from British rule in 1957.'
-  //       },
-  //       {
-  //         id: '11',
-  //         name: 'Malaysia Day',
-  //         date: `${year}-09-16`,
-  //         type: 'National',
-  //         description: 'Commemorates the formation of Malaysia in 1963.'
-  //       },
-  //       {
-  //         id: '12',
-  //         name: 'Deepavali',
-  //         date: `${year}-11-01`,
-  //         type: 'Religious',
-  //         description: 'Hindu festival of lights.'
-  //       },
-  //       {
-  //         id: '13',
-  //         name: 'Christmas',
-  //         date: `${year}-12-25`,
-  //         type: 'Religious',
-  //         description: 'Christian celebration of the birth of Jesus Christ.'
-  //       }
-  //     ];
-      
-  //     setHolidays(staticHolidays);
-      
-  //     // In a real app, you would save this to the database for future use
-  //     // await supabase.from('holidays').insert(staticHolidays);
-  //   } catch (err) {
-  //     console.error('Error fetching holidays from API:', err);
-  //     setError('Unable to load holidays. Please try again later.');
-  //   }
-  // };
-
-  const getHolidayIcon = (type: string) => {
+  const getHolidayIcon = useCallback((type: string) => {
     switch (type) {
       case 'National':
         return <FontAwesome5 name="flag" size={20} color="#D81B60" />;
@@ -192,9 +95,9 @@ export default function HolidayScreen() {
       default:
         return <FontAwesome5 name="calendar" size={20} color="#00897B" />;
     }
-  };
+  }, []);
 
-  const renderYearSelector = () => {
+  const renderYearSelector = useCallback(() => {
     return (
       <View style={styles.yearSelector}>
         <TouchableOpacity 
@@ -214,9 +117,9 @@ export default function HolidayScreen() {
         </TouchableOpacity>
       </View>
     );
-  };
+  }, [year]);
 
-  const groupHolidaysByMonth = () => {
+  const groupHolidaysByMonth = useCallback(() => {
     const grouped: { [key: string]: Holiday[] } = {};
     
     holidays.forEach(holiday => {
@@ -228,9 +131,22 @@ export default function HolidayScreen() {
     });
     
     return grouped;
-  };
+  }, [holidays]);
 
-  const renderHolidayItem = (holiday: Holiday) => {
+  const getTypeStyle = useCallback((type: string) => {
+    switch (type) {
+      case 'National':
+        return styles.nationalType;
+      case 'Religious':
+        return styles.religiousType;
+      case 'State':
+        return styles.stateType;
+      default:
+        return styles.otherType;
+    }
+  }, []);
+
+  const renderHolidayItem = useCallback((holiday: Holiday) => {
     return (
       <TouchableOpacity 
         key={holiday.id} 
@@ -254,28 +170,13 @@ export default function HolidayScreen() {
         </View>
       </TouchableOpacity>
     );
-  };
-
-  const getTypeStyle = (type: string) => {
-    switch (type) {
-      case 'National':
-        return styles.nationalType;
-      case 'Religious':
-        return styles.religiousType;
-      case 'State':
-        return styles.stateType;
-      default:
-        return styles.otherType;
-    }
-  };
+  }, [getHolidayIcon, getTypeStyle]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Year Selector */}
         {renderYearSelector()}
         
-        {/* Content */}
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#6A1B9A" />
@@ -283,37 +184,36 @@ export default function HolidayScreen() {
           </View>
         ) : error ? (
           <View style={styles.errorContainer}>
-            <FontAwesome5 name="exclamation-circle" size={50} color="#D32F2F" />
+            <FontAwesome5 name="exclamation-circle" size={50} color="#F44336" />
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity 
-              style={styles.retryButton}
-              onPress={fetchHolidays}
-            >
+            <TouchableOpacity style={styles.retryButton} onPress={fetchHolidays}>
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.calendarHeader}>
-              <FontAwesome5 name="calendar-alt" size={20} color="#6A1B9A" />
-              <Text style={styles.calendarHeaderText}>
-                {holidays.length} Holidays in {year}
-              </Text>
-            </View>
-            
-            {Object.entries(groupHolidaysByMonth()).map(([month, monthHolidays]) => (
-              <View key={month} style={styles.monthContainer}>
-                <Text style={styles.monthTitle}>{month}</Text>
-                {monthHolidays.map(holiday => renderHolidayItem(holiday))}
+          <RefreshWrapper onRefresh={handleRefresh}>
+            <View style={styles.contentContainer}>
+              <View style={styles.calendarHeader}>
+                <FontAwesome5 name="calendar-alt" size={20} color="#6A1B9A" />
+                <Text style={styles.calendarHeaderText}>
+                  {holidays.length} Holidays in {year}
+                </Text>
               </View>
-            ))}
-            
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>
-                * Tap on a holiday to see more details
-              </Text>
+              
+              {Object.entries(groupHolidaysByMonth()).map(([month, monthHolidays]) => (
+                <View key={month} style={styles.monthSection}>
+                  <Text style={styles.monthTitle}>{month}</Text>
+                  {monthHolidays.map(holiday => renderHolidayItem(holiday))}
+                </View>
+              ))}
+              
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>
+                  * Tap on a holiday to see more details
+                </Text>
+              </View>
             </View>
-          </ScrollView>
+          </RefreshWrapper>
         )}
       </View>
     </SafeAreaView>
@@ -484,5 +384,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
     fontStyle: 'italic',
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  monthSection: {
+    marginBottom: 24,
   },
 }); 

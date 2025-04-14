@@ -7,7 +7,7 @@ export default function SurveyLayout() {
       <Stack.Screen 
         name="index"
         options={{
-          header: () => <Header title="Survey & Feedback" />,
+          header: () => <Header title="Surveys" />,
         }}
       />
       <Stack.Screen 

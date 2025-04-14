@@ -7,13 +7,13 @@ export default function LeaveLayout() {
       <Stack.Screen 
         name="index"
         options={{
-          header: () => <Header title="Leave Application" />,
+          header: () => <Header title="Leaves" />,
         }}
       />
       <Stack.Screen 
         name="apply"
         options={{
-          header: () => <Header title="Apply Leave" />,
+          header: () => <Header title="Leave Application" />,
         }}
       />
     </Stack>

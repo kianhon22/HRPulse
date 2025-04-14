@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { supabase } from '../../../supabase';
 import { formatTotalHours } from '../../../utils/formatText';
+import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
+import RefreshWrapper from '../../../components/RefreshWrapper';
 
 interface AttendanceRecord {
   id: string;
@@ -34,40 +36,20 @@ export default function AttendancePage() {
   const [endDate, setEndDate] = useState<string | null>(today.toISOString().split('T')[0]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [markedDates, setMarkedDates] = useState<MarkedDates>({});
+  const [userId, setUserId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
+  // Get user ID on component mount
   useEffect(() => {
-    loadAttendanceRecords();
-  }, [startDate, endDate]);
-
-  async function loadAttendanceRecords() {
-    try {
+    const getUserId = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (user) setUserId(user.id);
+    };
+    getUserId();
+  }, []);
 
-      let query = supabase
-        .from('attendances')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('check_in', { ascending: false });
-
-      // Apply date range filter if both dates are selected
-      if (startDate && endDate) {
-        query = query
-          .gte('check_in', `${startDate}T00:00:00`)
-          .lte('check_in', `${endDate}T23:59:59`);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      setAttendanceRecords(data || []);
-      updateMarkedDates(data || []);
-    } catch (error) {
-      console.error('Error loading attendance:', error);
-    }
-  }
-
-  function updateMarkedDates(records: AttendanceRecord[]) {
+  // Memoize updateMarkedDates to avoid re-creation
+  const updateMarkedDates = useCallback((records: AttendanceRecord[]) => {
     const marks: MarkedDates = {};
     
     // Mark the date range if selected
@@ -116,9 +98,64 @@ export default function AttendancePage() {
     });
 
     setMarkedDates(marks);
-  }
+  }, [startDate, endDate]);
 
-  function handleDayPress(day: DateData) {
+  // Memoize loadAttendanceRecords to prevent unnecessary re-creation
+  const loadAttendanceRecords = useCallback(async () => {
+    if (!userId) return;
+
+    try {
+      let query = supabase
+        .from('attendances')
+        .select('*')
+        .eq('user_id', userId)
+        .order('check_in', { ascending: false });
+
+      // Apply date range filter if both dates are selected
+      if (startDate && endDate) {
+        query = query
+          .gte('check_in', `${startDate}T00:00:00`)
+          .lte('check_in', `${endDate}T23:59:59`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      setAttendanceRecords(data || []);
+      updateMarkedDates(data || []);
+    } catch (error) {
+      console.error('Error loading attendance:', error);
+    }
+  }, [userId, startDate, endDate, updateMarkedDates]);
+
+  // Create a stable callback for realtime updates
+  const handleAttendanceChange = useCallback(() => {
+    loadAttendanceRecords();
+  }, [loadAttendanceRecords]);
+
+  // Set up realtime subscription
+  useSupabaseRealtime(
+    'attendances',
+    '*',
+    'user_id',
+    userId || undefined,
+    handleAttendanceChange
+  );
+
+  // Load initial data when dependencies change
+  useEffect(() => {
+    if (userId) {
+      loadAttendanceRecords();
+    }
+  }, [userId, loadAttendanceRecords]);
+
+  // Handle pull-to-refresh
+  const handleRefresh = useCallback(async () => {
+    await loadAttendanceRecords();
+  }, [loadAttendanceRecords]);
+
+  // Handle day selection in calendar
+  const handleDayPress = useCallback((day: DateData) => {
     if (!startDate || (startDate && endDate)) {
       // Start new selection
       setStartDate(day.dateString);
@@ -132,15 +169,16 @@ export default function AttendancePage() {
         setStartDate(day.dateString);
       }
     }
-  }
+  }, [startDate, endDate]);
 
-  function formatTime(timestamp: string) {
+  // Format time utilities
+  const formatTime = useCallback((timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
     });
-  }
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -155,38 +193,43 @@ export default function AttendancePage() {
         }}
       />
 
-      <ScrollView style={styles.recordsList}>
-        {attendanceRecords.map((record) => (
-          <View key={record.id} style={styles.recordItem}>
-            <View style={styles.dateContainer}>
-              <Text style={styles.dateText}>
-                {new Date(record.check_in).getDate()}
-              </Text>
-              <Text style={styles.dayText}>
-                {new Date(record.check_in).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.timeContainer}>
-              <View style={styles.timeBlock}>
-                <Text style={styles.timeLabel}>Check In</Text>
-                <Text style={styles.timeValue}>{formatTime(record.check_in)}</Text>
-              </View>
-              <View style={styles.timeBlock}>
-                <Text style={styles.timeLabel}>Check Out</Text>
-                <Text style={styles.timeValue}>
-                  {record.check_out ? formatTime(record.check_out) : '--:--'}
+      <RefreshWrapper 
+        onRefresh={handleRefresh}
+        style={styles.recordsList}
+      >
+        <View>
+          {attendanceRecords.map((record) => (
+            <View key={record.id} style={styles.recordItem}>
+              <View style={styles.dateContainer}>
+                <Text style={styles.dateText}>
+                  {new Date(record.check_in).getDate()}
+                </Text>
+                <Text style={styles.dayText}>
+                  {new Date(record.check_in).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
                 </Text>
               </View>
-              <View style={styles.timeBlock}>
-                <Text style={styles.timeLabel}>Total Hours</Text>
-                <Text style={styles.timeValue}>
-                  {formatTotalHours(record.total_hours ?? 0)}
-                </Text>
+              <View style={styles.timeContainer}>
+                <View style={styles.timeBlock}>
+                  <Text style={styles.timeLabel}>Check In</Text>
+                  <Text style={styles.timeValue}>{formatTime(record.check_in)}</Text>
+                </View>
+                <View style={styles.timeBlock}>
+                  <Text style={styles.timeLabel}>Check Out</Text>
+                  <Text style={styles.timeValue}>
+                    {record.check_out ? formatTime(record.check_out) : '--:--'}
+                  </Text>
+                </View>
+                <View style={styles.timeBlock}>
+                  <Text style={styles.timeLabel}>Total Hours</Text>
+                  <Text style={styles.timeValue}>
+                    {formatTotalHours(record.total_hours ?? 0)}
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
-      </ScrollView>
+          ))}
+        </View>
+      </RefreshWrapper>
     </View>
   );
 }

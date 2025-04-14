@@ -48,6 +48,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="recognition"
+        options={{
+          title: 'Recognition',
+          tabBarIcon: ({ color }) => <TabBarIcon name="trophy" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="survey"
         options={{
           title: 'Survey',
@@ -61,13 +68,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <TabBarIcon name="gift" color={color} />,
         }}
       />
-      {/* <Tabs.Screen
-        name="recognition"
-        options={{
-          title: 'Recognition',
-          tabBarIcon: ({ color }) => <TabBarIcon name="trophy" color={color} />,
-        }}
-      /> */}
     </Tabs>
   );
 } 

@@ -243,7 +243,6 @@ export default function SurveyDetailScreen() {
           let sentimentData = null;
           
           if (responseText) {
-            // Run sentiment analysis on this text response
             sentimentData = await sentimentAnalysis(responseText);
           }
           
@@ -256,7 +255,6 @@ export default function SurveyDetailScreen() {
           });
         }
       } else {
-        // For Rating surveys, no sentiment analysis needed
         responseData = responses.map(r => ({
           survey_id: id,
           question_id: r.question_id,
