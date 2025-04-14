@@ -4,48 +4,50 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'expo-router';
 
-export default function RewardsLayout() {
+export default function RecognitionLayout() {
   const router = useRouter();
   const pathname = usePathname();
-  const [activeTab, setActiveTab] = useState('catalog');
+  const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
     // Set active tab based on the current path
-    if (pathname.includes('redemptions')) {
-      setActiveTab('redemptions');
+    if (pathname.includes('personal')) {
+      setActiveTab('personal');
+    } else if (pathname.includes('form')) {
+      // Don't change the active tab when on the form
     } else {
-      setActiveTab('catalog');
+      setActiveTab('all');
     }
   }, [pathname]);
 
   const navigateTo = (tab: string) => {
-    if (tab === 'catalog') {
-      router.push('/rewards');
+    if (tab === 'all') {
+      router.push('/recognition' as any);
     } else {
-      router.push('/rewards/redemptions');
+      router.push('/recognition/personal' as any);
     }
   };
 
   return (
     <View style={{ flex: 1 }}>
-      <Header title="Rewards" />
+      <Header title="Recognitions" />
       
       <View style={styles.tabContainer}>
         <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'catalog' && styles.activeTab]}
-          onPress={() => navigateTo('catalog')}
+          style={[styles.tabButton, activeTab === 'all' && styles.activeTab]}
+          onPress={() => navigateTo('all')}
         >
-          <Text style={[styles.tabText, activeTab === 'catalog' && styles.activeTabText]}>
-            Rewards Catalog
+          <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+            All Recognitions
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'redemptions' && styles.activeTab]}
-          onPress={() => navigateTo('redemptions')}
+          style={[styles.tabButton, activeTab === 'personal' && styles.activeTab]}
+          onPress={() => navigateTo('personal')}
         >
-          <Text style={[styles.tabText, activeTab === 'redemptions' && styles.activeTabText]}>
-            My Redemptions
+          <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>
+            My Recognitions
           </Text>
         </TouchableOpacity>
       </View>
@@ -55,7 +57,13 @@ export default function RewardsLayout() {
           name="index"
         />
         <Stack.Screen 
-          name="redemptions"
+          name="personal"
+        />
+        <Stack.Screen 
+          name="form"
+          options={{
+            presentation: 'modal',
+          }}
         />
       </Stack>
     </View>
