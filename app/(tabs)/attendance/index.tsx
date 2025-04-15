@@ -216,13 +216,13 @@ export default function AttendancePage() {
                 <View style={styles.timeBlock}>
                   <Text style={styles.timeLabel}>Check Out</Text>
                   <Text style={styles.timeValue}>
-                    {record.check_out ? formatTime(record.check_out) : '--:--'}
+                    {record.check_out ? formatTime(record.check_out) : 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.timeBlock}>
                   <Text style={styles.timeLabel}>Total Hours</Text>
                   <Text style={styles.timeValue}>
-                    {formatTotalHours(record.total_hours ?? 0)}
+                    {formatTotalHours(record.total_hours)}
                   </Text>
                 </View>
               </View>

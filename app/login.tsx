@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View, TextInput, TouchableOpacity, Text, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, View, TextInput, TouchableOpacity, Text, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { supabase } from '../supabase';
 import { useRouter, Link } from 'expo-router';
 
@@ -50,6 +50,33 @@ export default function Login() {
     }
   }
 
+  async function resetPassword() {
+    if (!form.email) {
+      Alert.alert('Error', 'Please enter your email address');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // Use Supabase's hosted auth pages - more reliable than deep linking for password reset
+      const { error } = await supabase.auth.resetPasswordForEmail(form.email.trim());
+
+      if (error) {
+        Alert.alert('Error', error.message);
+        return;
+      }
+
+      Alert.alert(
+        'Password Reset Link Sent',
+        'Please check your email to reset your password. After resetting your password, you may sign in again.'
+      );
+    } catch (error: any) {
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -61,8 +88,13 @@ export default function Login() {
       >
         <View style={styles.container}>
           <View style={styles.formContainer}>
-            <Text style={styles.title}>HRPulse</Text>
-            <Text style={styles.subtitle}>Employee Portal</Text>
+            <Image 
+              source={require('../assets/images/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            {/* <Text style={styles.title}>HRPulse</Text> */}
+            <Text style={styles.subtitle}>HRPulse - Employee Portal</Text>
             
             <TextInput
               style={styles.input}
@@ -98,12 +130,9 @@ export default function Login() {
             </TouchableOpacity>
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <Link href="/register" asChild>
-                <TouchableOpacity>
-                  <Text style={styles.linkText}>Register</Text>
-                </TouchableOpacity>
-              </Link>
+              <TouchableOpacity onPress={resetPassword} disabled={loading}>
+                <Text style={styles.linkText}>Forgot Your Password?</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -138,17 +167,22 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
+  logo: {
+    width: 100,
+    height: 100,
+    alignSelf: 'center',
+  },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 10,
-    color: '#007AFF',
+    color: '#6A1B9A',
   },
   subtitle: {
     fontSize: 18,
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 20,
     color: '#666',
   },
   input: {
@@ -162,7 +196,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6A1B9A',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
@@ -187,7 +221,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   linkText: {
-    color: '#007AFF',
+    color: '#6A1B9A',
     fontSize: 16,
     fontWeight: '600',
   },

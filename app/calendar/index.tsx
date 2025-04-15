@@ -39,11 +39,11 @@ interface CalendarDay {
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const LEAVE_TYPE_COLORS = {
-  'Annual': '#FFC107',
-  'Medical': '#F44336',
-  'Emergency': '#FF5722',
+  'Annual': '#8E24AA',
+  'Medical': '#fcdd08',
+  'Emergency': '#F44336',
   'Unpaid': '#9E9E9E',
-  'Holiday': '#8E24AA',
+  'Holiday': '#32a852',
 };
 
 export default function CalendarScreen() {
@@ -506,7 +506,7 @@ export default function CalendarScreen() {
         
         {/* Legend */}
         <View style={styles.legendContainer}>
-          {Object.entries({...LEAVE_TYPE_COLORS, 'Holiday': '#8E24AA'}).map(([type, color]) => (
+          {Object.entries({...LEAVE_TYPE_COLORS, 'Holiday': '#32a852'}).map(([type, color]) => (
             <View key={type} style={styles.legendItem}>
               <View style={[styles.legendColor, { backgroundColor: color }]} />
               <Text style={styles.legendText}>{type}</Text>
@@ -677,7 +677,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8e7ff',
   },
   holidayText: {
-    color: '#8E24AA',
     fontWeight: 'bold',
   },
   indicatorContainer: {

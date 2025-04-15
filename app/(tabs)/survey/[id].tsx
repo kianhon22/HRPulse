@@ -41,33 +41,16 @@ export default function SurveyDetailScreen() {
   const groupedQuestions = useMemo(() => {
     if (!questions || questions.length === 0 || !survey?.type) return [];
 
-    if (survey.type === 'Rating') {
-      // Group ALL questions by category for Rating Surveys
-      const categoriesMap = new Map<string, Question[]>();
-      questions.forEach(q => {
-        const categoryKey = q.category || 'Uncategorized';
-        if (!categoriesMap.has(categoryKey)) {
-          categoriesMap.set(categoryKey, []);
-        }
-        categoriesMap.get(categoryKey)!.push(q);
-      });
-      return Array.from(categoriesMap.values()).filter(group => group.length > 0);
-    } else if (survey.type === 'Text') {
-      // Group ALL questions into pages of 5 for Text Surveys
-      const textGroups = [];
-      for (let i = 0; i < questions.length; i += 5) {
-        textGroups.push(questions.slice(i, i + 5));
+    // For both Rating and Text surveys, group all questions by category
+    const categoriesMap = new Map<string, Question[]>();
+    questions.forEach(q => {
+      const categoryKey = q.category || 'Uncategorized';
+      if (!categoriesMap.has(categoryKey)) {
+        categoriesMap.set(categoryKey, []);
       }
-      return textGroups.filter(group => group.length > 0);
-    } else {
-      // Fallback or handle unknown survey type (e.g., show all)
-      // Simple pagination as fallback
-       const fallbackGroups = [];
-        for (let i = 0; i < questions.length; i += 5) {
-           fallbackGroups.push(questions.slice(i, i + 5));
-        }
-       return fallbackGroups.filter(group => group.length > 0);
-    }
+      categoriesMap.get(categoryKey)!.push(q);
+    });
+    return Array.from(categoriesMap.values()).filter(group => group.length > 0);
   }, [questions, survey?.type]); // Depend on questions and survey type
   
   // Calculate totalPages and currentQuestions based on the memoized groupedQuestions
@@ -107,25 +90,7 @@ export default function SurveyDetailScreen() {
       if (error) throw error;
       console.log("Sentiment result:", data);
       
-      if (data && Array.isArray(data) && data.length > 0) {
-        // Flatten all results into a single array
-        const allResults = data.flatMap(result => 
-          result.map((item: { label: string; score: number }) => ({ label: item.label, score: item.score }))
-        );
-        
-        // Find the result with the highest score
-        const topResult = allResults.reduce((prev, current) => 
-          (current.score > prev.score) ? current : prev
-        , allResults[0]);
-        
-        // Return the structured sentiment data
-        return {
-          top_label: topResult.label,
-          top_score: topResult.score,
-          all: allResults
-        };
-      }
-      return null;
+      return data;
     } catch (err) {
       console.error("Error in sentiment analysis:", err);
       return null;
@@ -244,6 +209,14 @@ export default function SurveyDetailScreen() {
           
           if (responseText) {
             sentimentData = await sentimentAnalysis(responseText);
+
+            if (Array.isArray(sentimentData)) {
+              // Remove extra words and convert to integer
+              sentimentData = sentimentData[0].map((item: { label: string; score: number }) => ({
+                label: parseInt(item.label),
+                score: item.score
+              }));
+            }
           }
           
           responseData.push({

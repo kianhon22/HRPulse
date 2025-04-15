@@ -159,6 +159,12 @@ export default function RootLayout() {
             drawerItemStyle: { display: 'none' },
           }}
         />
+        <Drawer.Screen
+          name="reset-password"
+          options={{
+            drawerItemStyle: { display: 'none' },
+          }}
+        />
       </Drawer>
     </ThemeProvider>
   );

@@ -47,6 +47,8 @@ export default function SurveysScreen() {
       const { data: activeSurveys, error: activeError } = await supabase
         .from('surveys')
         .select('*')
+        .eq('is_template', false)
+        .in('status', ['Active', 'Ended'])
         .gte('start_date', startOfYear)
         .lte('start_date', today)
         .order('start_date', { ascending: false });

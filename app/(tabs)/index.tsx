@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF9800',
   },
   completedButton: {
-    backgroundColor: '#9E9E9E',
+    backgroundColor: '#6A1B9A',
   },
   buttonDisabled: {
     opacity: 0.7,
