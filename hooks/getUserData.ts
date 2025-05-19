@@ -24,7 +24,12 @@ export function getUserData() {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+    let channel: any = null;
+
     async function loadUserData() {
+      if (!mounted) return;
+      
       try {
         setLoading(true);
         
@@ -46,35 +51,65 @@ export function getUserData() {
 
         if (profileError) throw profileError;
         
-        setUserData(data || {
-          id: user.id,
-          email: user.email || '',
-        });
+        if (mounted) {
+          setUserData(data || {
+            id: user.id,
+            email: user.email || '',
+          });
+        }
+        
+        // Now that we have the user ID, set up the subscription
+        if (mounted && !channel && user.id) {
+          setupSubscription(user.id);
+        }
       } catch (err) {
         console.error('Error loading user data:', err);
-        setError(err instanceof Error ? err : new Error('Failed to load user data'));
+        if (mounted) {
+          setError(err instanceof Error ? err : new Error('Failed to load user data'));
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
+    function setupSubscription(userId: string) {
+      // Subscribe to user profile changes with the actual user ID
+      channel = supabase
+        .channel('profile_changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${userId}`,
+        }, () => {
+          // Reload user data when profile changes
+          loadUserData();
+        })
+        .subscribe();
+    }
+
+    // Initial load
     loadUserData();
 
-    // Subscribe to user profile changes
-    const channel = supabase
-      .channel('profile_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'users',
-        filter: `id=eq.${supabase.auth.getUser().then(({data}) => data.user?.id)}`,
-      }, () => {
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // Reload data on auth state changes
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         loadUserData();
-      })
-      .subscribe();
+      } else if (event === 'SIGNED_OUT') {
+        setUserData(null);
+      }
+    });
 
+    // Cleanup
     return () => {
-      supabase.removeChannel(channel);
+      mounted = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+      subscription.unsubscribe();
     };
   }, []);
 

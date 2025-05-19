@@ -11,6 +11,7 @@ import {
 import { FontAwesome5 } from '@expo/vector-icons';
 import { format, parseISO, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMonth, isSameDay } from 'date-fns';
 import { supabase } from '../../supabase';
+import { getUserData } from '../../hooks/getUserData';
 
 interface LeaveRecord {
   id: string;
@@ -27,14 +28,15 @@ interface Holiday {
   name: string;
   date: string;
   type: string;
+  description?: string;
 }
 
 interface CalendarDay {
   date: Date;
+  leaves: LeaveRecord[];
+  holiday: Holiday;
   isCurrentMonth: boolean;
   isToday: boolean;
-  leaves: LeaveRecord[];
-  holiday?: Holiday;
 }
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -47,6 +49,7 @@ const LEAVE_TYPE_COLORS = {
 };
 
 export default function CalendarScreen() {
+  const { userData } = getUserData();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
@@ -56,7 +59,7 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     loadMonthData();
-  }, [currentMonth]);
+  }, [currentMonth, userData]);
 
   const loadMonthData = async () => {
     setLoading(true);
@@ -132,85 +135,6 @@ export default function CalendarScreen() {
     return 'Other';
   };
   
-  // const fetchHolidays = async () => {
-  //   try {
-  //     const year = currentMonth.getFullYear();
-  //     const month = currentMonth.getMonth() + 1;
-      
-  //     // Attempt to fetch from holidays table
-  //     const { data, error } = await supabase
-  //       .from('holidays')
-  //       .select('*')
-  //       .eq('year', year)
-  //       .ilike('date', `${year}-${month.toString().padStart(2, '0')}%`);
-      
-  //     if (error) throw error;
-      
-  //     if (data && data.length > 0) {
-  //       setHolidays(data);
-  //     } else {
-  //       // If no data, use hardcoded holidays for the demo
-  //       // In a real app, you'd save this to the database or fetch from an API
-  //       const demoHolidays: Holiday[] = getHardcodedHolidays(year, month);
-  //       setHolidays(demoHolidays);
-  //     }
-  //   } catch (error) {
-  //     console.error('Error fetching holidays:', error);
-  //     // Fallback to hardcoded holidays
-  //     const demoHolidays: Holiday[] = getHardcodedHolidays(currentMonth.getFullYear(), currentMonth.getMonth() + 1);
-  //     setHolidays(demoHolidays);
-  //   }
-  // };
-
-  // const getHardcodedHolidays = (year: number, month: number): Holiday[] => {
-  //   // This is a simple example with Malaysian holidays
-  //   // In a real app, this would come from a more complete source
-  //   const holidayData: {[key: string]: {name: string, month: number, day: number, type: string}[]} = {
-  //     '2023': [
-  //       { name: "New Year's Day", month: 1, day: 1, type: 'National' },
-  //       { name: "Chinese New Year", month: 1, day: 22, type: 'National' },
-  //       { name: "Federal Territory Day", month: 2, day: 1, type: 'State' },
-  //       { name: "Thaipusam", month: 2, day: 5, type: 'Religious' },
-  //       { name: "Labour Day", month: 5, day: 1, type: 'National' },
-  //       { name: "Wesak Day", month: 5, day: 4, type: 'Religious' },
-  //       { name: "King's Birthday", month: 6, day: 5, type: 'National' },
-  //       { name: "Hari Raya Puasa", month: 4, day: 22, type: 'Religious' },
-  //       { name: "National Day", month: 8, day: 31, type: 'National' },
-  //       { name: "Malaysia Day", month: 9, day: 16, type: 'National' },
-  //       { name: "Deepavali", month: 11, day: 12, type: 'Religious' },
-  //       { name: "Christmas", month: 12, day: 25, type: 'Religious' }
-  //     ],
-  //     '2024': [
-  //       { name: "New Year's Day", month: 1, day: 1, type: 'National' },
-  //       { name: "Chinese New Year", month: 2, day: 10, type: 'National' },
-  //       { name: "Federal Territory Day", month: 2, day: 1, type: 'State' },
-  //       { name: "Thaipusam", month: 1, day: 25, type: 'Religious' },
-  //       { name: "Labour Day", month: 5, day: 1, type: 'National' },
-  //       { name: "Wesak Day", month: 5, day: 22, type: 'Religious' },
-  //       { name: "Hari Raya Puasa", month: 4, day: 10, type: 'Religious' },
-  //       { name: "King's Birthday", month: 6, day: 3, type: 'National' },
-  //       { name: "Hari Raya Haji", month: 6, day: 17, type: 'Religious' },
-  //       { name: "National Day", month: 8, day: 31, type: 'National' },
-  //       { name: "Malaysia Day", month: 9, day: 16, type: 'National' },
-  //       { name: "Deepavali", month: 11, day: 1, type: 'Religious' },
-  //       { name: "Christmas", month: 12, day: 25, type: 'Religious' }
-  //     ]
-  //   };
-
-  //   const yearStr = year.toString();
-  //   // Use current year data if available, otherwise fallback to 2024
-  //   const yearData = holidayData[yearStr] || holidayData['2024'];
-    
-  //   return yearData
-  //     .filter(h => h.month === month)
-  //     .map((h, index) => ({
-  //       id: `holiday-${year}-${month}-${h.day}-${index}`,
-  //       name: h.name,
-  //       date: `${year}-${month.toString().padStart(2, '0')}-${h.day.toString().padStart(2, '0')}`,
-  //       type: h.type
-  //     }));
-  // };
-
   const fetchUserNames = async () => {
     try {
       const { data, error } = await supabase

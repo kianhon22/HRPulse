@@ -7,6 +7,7 @@ import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
 import RefreshWrapper from '../../../components/RefreshWrapper';
+import { getUserData } from '../../../hooks/getUserData';
 
 interface LeaveApplication {
   id: string;
@@ -29,23 +30,14 @@ const LEAVE_TYPES = [
 ];
 
 export default function LeaveHistoryPage() {
+  const { userData } = getUserData();
   const [applications, setApplications] = useState<LeaveApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState('');
-  const [userId, setUserId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-
-  // Get user ID on component mount
-  useEffect(() => {
-    const getUserId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) setUserId(user.id);
-    };
-    getUserId();
-  }, []);
 
   // Format date for display
   const formatDisplayDate = (date: Date | null) => {
@@ -59,7 +51,7 @@ export default function LeaveHistoryPage() {
 
   // Memoize the loadLeaveApplications function to prevent unnecessary re-creation
   const loadLeaveApplications = useCallback(async () => {
-    if (!userId) return;
+    if (!userData?.id) return;
     
     try {
       setLoading(true);
@@ -69,7 +61,7 @@ export default function LeaveHistoryPage() {
       let query = supabase
         .from('leaves')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', userData.id)
         .order('created_at', { ascending: false });
       
       // Apply date filter if dates are selected
@@ -99,7 +91,7 @@ export default function LeaveHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [userId, selectedType, startDate, endDate]);
+  }, [userData?.id, selectedType, startDate, endDate]);
 
   // Clear filters
   const clearFilters = () => {
@@ -118,16 +110,16 @@ export default function LeaveHistoryPage() {
     'leaves',
     '*',
     'user_id',
-    userId || undefined,
+    userData?.id,
     handleLeaveChange
   );
 
-  // Load initial data when userId or filters change
+  // Load initial data when userData or filters change
   useEffect(() => {
-    if (userId) {
+    if (userData?.id) {
       loadLeaveApplications();
     }
-  }, [userId, loadLeaveApplications]);
+  }, [userData?.id, loadLeaveApplications]);
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {

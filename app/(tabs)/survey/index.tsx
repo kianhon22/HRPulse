@@ -6,6 +6,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
 import RefreshWrapper from '../../../components/RefreshWrapper';
+import { getUserData } from '../../../hooks/getUserData';
 
 interface Survey {
   id: string;
@@ -21,22 +22,13 @@ interface Survey {
 }
 
 export default function SurveysScreen() {
+  const { userData } = getUserData();
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-
-  // Get user ID on mount
-  useEffect(() => {
-    const getUserId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) setUserId(user.id);
-    };
-    getUserId();
-  }, []);
 
   // Memoize load function to prevent re-creation
   const loadSurveys = useCallback(async () => {
-    if (!userId) return;
+    if (!userData?.id) return;
     
     setLoading(true);
     try {
@@ -48,7 +40,7 @@ export default function SurveysScreen() {
         .from('surveys')
         .select('*')
         .eq('is_template', false)
-        .in('status', ['Active', 'Ended'])
+        .in('status', ['Active', 'Closed'])
         .gte('start_date', startOfYear)
         .lte('start_date', today)
         .order('start_date', { ascending: false });
@@ -58,7 +50,7 @@ export default function SurveysScreen() {
       const { data: completedSurveys, error: completedError } = await supabase
         .from('survey_responses')
         .select('survey_id')
-        .eq('user_id', userId);
+        .eq('user_id', userData.id);
 
       if (completedError) throw completedError;
 
@@ -76,7 +68,7 @@ export default function SurveysScreen() {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userData?.id]);
 
   // Stable callbacks for realtime updates
   const handleSurveyChange = useCallback(() => {
@@ -100,16 +92,16 @@ export default function SurveysScreen() {
     'survey_responses',
     '*',
     'user_id',
-    userId || undefined,
+    userData?.id,
     handleResponseChange
   );
 
   // Load initial data
   useEffect(() => {
-    if (userId) {
+    if (userData?.id) {
       loadSurveys();
     }
-  }, [userId, loadSurveys]);
+  }, [userData?.id, loadSurveys]);
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
@@ -157,9 +149,9 @@ export default function SurveysScreen() {
                     <View style={styles.completedBadge}>
                       <Text style={styles.statusText}>Completed</Text>
                     </View>
-                  ) : (survey.status == 'Ended' ? (
+                  ) : (survey.status == 'Closed' ? (
                     <View style={styles.endedBadge}>
-                      <Text style={styles.statusText}>Ended</Text>
+                      <Text style={styles.statusText}>Closed</Text>
                     </View>
                   ) : (
                     <View style={styles.notCompletedBadge}>
@@ -177,7 +169,7 @@ export default function SurveysScreen() {
                     {format(new Date(survey.start_date), 'MMM dd, yyyy')} - {format(new Date(survey.end_date), 'MMM dd, yyyy')}
                   </Text>
                   <View style={styles.buttonContainer}>
-                    {survey.is_completed ? (
+                    {survey.is_completed || survey.status == "Closed" ? (
                       <TouchableOpacity 
                         style={styles.viewButton}
                         onPress={() => router.push(`/survey/${survey.id}`)}

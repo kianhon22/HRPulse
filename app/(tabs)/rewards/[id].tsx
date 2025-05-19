@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Alert, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../../../supabase';
+import { getUserData } from '../../../hooks/getUserData';
 
 interface Reward {
   id: string;
@@ -9,11 +10,12 @@ interface Reward {
   description: string;
   points_required: number;
   image_url: string | null;
-  available: boolean;
+  is_active: boolean;
   terms_conditions: string | null;
 }
 
 export default function RewardDetailsScreen() {
+  const { userData } = getUserData();
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [reward, setReward] = useState<Reward | null>(null);
@@ -23,12 +25,11 @@ export default function RewardDetailsScreen() {
 
   useEffect(() => {
     loadRewardAndPoints();
-  }, [id]);
+  }, [id, userData]);
 
   async function loadRewardAndPoints() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!userData?.id) return;
 
       // Load reward details
       const { data: rewardData, error: rewardError } = await supabase
@@ -44,7 +45,8 @@ export default function RewardDetailsScreen() {
       const { data: recognitionsData, error: recognitionsError } = await supabase
         .from('recognitions')
         .select('points')
-        .eq('to_user_id', user.id);
+        .eq('to_user_id', userData.id)
+        .eq('status', 'Approved');
 
       if (recognitionsError) throw recognitionsError;
       const totalPoints = (recognitionsData || []).reduce((sum, rec) => sum + (rec.points || 0), 0);
@@ -53,8 +55,8 @@ export default function RewardDetailsScreen() {
       const { data: redemptionsData, error: redemptionsError } = await supabase
         .from('reward_redemptions')
         .select('points_spent')
-        .eq('user_id', user.id)
-        .eq('status', 'Approved');
+        .eq('user_id', userData.id)
+        .eq('status', 'Completed');
 
       if (redemptionsError) throw redemptionsError;
       const spentPoints = (redemptionsData || []).reduce((sum, red) => sum + (red.points_spent || 0), 0);
@@ -72,8 +74,9 @@ export default function RewardDetailsScreen() {
     
     try {
       setRedeeming(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      if (!userData?.id) {
+        throw new Error('User not authenticated');
+      }
 
       if (userPoints < reward.points_required) {
         throw new Error('Insufficient points');
@@ -82,7 +85,7 @@ export default function RewardDetailsScreen() {
       const { error } = await supabase
         .from('reward_redemptions')
         .insert({
-          user_id: user.id,
+          user_id: userData.id,
           reward_id: reward.id,
           points_spent: reward.points_required,
           status: 'Pending'
@@ -118,7 +121,7 @@ export default function RewardDetailsScreen() {
     );
   }
 
-  const canRedeem = userPoints >= reward.points_required && reward.available;
+  const canRedeem = userPoints >= reward.points_required && reward.is_active === true;
 
   return (
     <ScrollView style={styles.container}>
@@ -137,7 +140,7 @@ export default function RewardDetailsScreen() {
         <View style={styles.pointsInfo}>
           <Text style={styles.pointsRequired}>Points Required: {reward.points_required}</Text>
           <Text style={styles.userPoints}>Your Points: {userPoints}</Text>
-          {!canRedeem && userPoints < reward.points_required && (
+          {userPoints < reward.points_required && (
             <Text style={styles.pointsNeeded}>
               {reward.points_required - userPoints} more points needed
             </Text>

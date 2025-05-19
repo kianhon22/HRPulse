@@ -15,59 +15,47 @@ import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { formatDate } from '../../utils/formatText';
 import { router } from 'expo-router';
+import { getUserData, UserData } from '../../hooks/getUserData';
 
 interface UserProfile {
   id: string;
   name: string;
   email: string;
-  phone: string;
-  department: string;
-  position: string;
-  employment_type: string;
-  work_mode: string;
-  join_company_date: Date;
-  image_url: string | null;
+  phone?: string;
+  department?: string;
+  position?: string;
+  employment_type?: string;
+  work_mode?: string;
+  join_company_date?: string;
+  image_url?: string | null;
 }
 
 export default function ProfileScreen() {
+  const { userData, loading: userDataLoading } = getUserData();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState<Partial<UserProfile>>({});
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    loadProfile();
-  }, []);
-
-  async function loadProfile() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-      setProfile(data);
-      setEditedProfile(data);
-    } catch (error) {
-      console.error('Error loading profile:', error);
-      Alert.alert('Error', 'Failed to load profile');
+    if (userData) {
+      // Set profile from userData
+      setProfile(userData as unknown as UserProfile);
+      setEditedProfile(userData as unknown as Partial<UserProfile>);
     }
-  }
+  }, [userData]);
 
   const handleSave = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!userData?.id) {
+        Alert.alert('Error', 'User not authenticated');
+        return;
+      }
 
       const { error } = await supabase
         .from('users')
         .update(editedProfile)
-        .eq('id', user.id);
+        .eq('id', userData.id);
 
       if (error) throw error;
 
@@ -82,23 +70,21 @@ export default function ProfileScreen() {
 
   const pickImage = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow access to your photo library');
-        return;
-      }
-
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: "images",
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5,
+        quality: 0.7,
         base64: true,
       });
 
-      if (!result.canceled && result.assets && result.assets[0].base64) {
-        await uploadProfilePic(result.assets[0].base64);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const base64Image = result.assets[0].base64;
+        if (!base64Image) {
+          throw new Error('No base64 image data found');
+        }
+        
+        await uploadImage(base64Image);
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -106,14 +92,16 @@ export default function ProfileScreen() {
     }
   };
 
-  const uploadProfilePic = async (base64Image: string) => {
+  const uploadImage = async (base64Image: string) => {
     try {
       setUploading(true);
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!userData?.id) {
+        Alert.alert('Error', 'User not authenticated');
+        return;
+      }
 
-      const fileName = `${user.id}-${Date.now()}.jpg`;
+      const fileName = `${userData.id}-${Date.now()}.jpg`;
       const { data: uploadData, error: uploadError } = await supabase
         .storage
         .from('profiles')
@@ -133,7 +121,7 @@ export default function ProfileScreen() {
       const { error: updateError } = await supabase
         .from('users')
         .update({ image_url: publicUrl })
-        .eq('id', user.id);
+        .eq('id', userData.id);
 
       if (updateError) throw updateError;
 
@@ -161,7 +149,7 @@ export default function ProfileScreen() {
     }
   };
 
-  if (!profile) {
+  if (userDataLoading || !profile) {
     return (
       <View style={styles.loadingContainer}>
         <Text>Loading profile...</Text>

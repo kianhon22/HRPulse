@@ -5,6 +5,7 @@ import { supabase } from '../../../supabase';
 import { formatTotalHours } from '../../../utils/formatText';
 import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
 import RefreshWrapper from '../../../components/RefreshWrapper';
+import { getUserData } from '../../../hooks/getUserData';
 
 interface AttendanceRecord {
   id: string;
@@ -16,13 +17,12 @@ interface AttendanceRecord {
 
 interface MarkedDates {
   [date: string]: {
-    marked?: boolean;
-    dotColor?: string;
-    selected?: boolean;
     startingDay?: boolean;
     endingDay?: boolean;
     color?: string;
     textColor?: string;
+    marked?: boolean;
+    dotColor?: string;
   };
 }
 
@@ -32,21 +32,12 @@ export default function AttendancePage() {
   const twoWeeksAgo = new Date();
   twoWeeksAgo.setDate(today.getDate() - 14);
   
+  const { userData } = getUserData();
   const [startDate, setStartDate] = useState<string | null>(twoWeeksAgo.toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState<string | null>(today.toISOString().split('T')[0]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [markedDates, setMarkedDates] = useState<MarkedDates>({});
-  const [userId, setUserId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Get user ID on component mount
-  useEffect(() => {
-    const getUserId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) setUserId(user.id);
-    };
-    getUserId();
-  }, []);
 
   // Memoize updateMarkedDates to avoid re-creation
   const updateMarkedDates = useCallback((records: AttendanceRecord[]) => {
@@ -102,13 +93,13 @@ export default function AttendancePage() {
 
   // Memoize loadAttendanceRecords to prevent unnecessary re-creation
   const loadAttendanceRecords = useCallback(async () => {
-    if (!userId) return;
+    if (!userData?.id) return;
 
     try {
       let query = supabase
         .from('attendances')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', userData.id)
         .order('check_in', { ascending: false });
 
       // Apply date range filter if both dates are selected
@@ -126,7 +117,7 @@ export default function AttendancePage() {
     } catch (error) {
       console.error('Error loading attendance:', error);
     }
-  }, [userId, startDate, endDate, updateMarkedDates]);
+  }, [userData?.id, startDate, endDate, updateMarkedDates]);
 
   // Create a stable callback for realtime updates
   const handleAttendanceChange = useCallback(() => {
@@ -138,16 +129,16 @@ export default function AttendancePage() {
     'attendances',
     '*',
     'user_id',
-    userId || undefined,
+    userData?.id,
     handleAttendanceChange
   );
 
   // Load initial data when dependencies change
   useEffect(() => {
-    if (userId) {
+    if (userData?.id) {
       loadAttendanceRecords();
     }
-  }, [userId, loadAttendanceRecords]);
+  }, [userData?.id, loadAttendanceRecords]);
 
   // Handle pull-to-refresh
   const handleRefresh = useCallback(async () => {

@@ -11,6 +11,7 @@ interface Survey {
   description: string;
   start_date: string;
   end_date: string;
+  status: string;
   type: 'Rating' | 'Text';
 }
 
@@ -82,9 +83,8 @@ export default function SurveyDetailScreen() {
   const sentimentAnalysis = async (response: string) => {
     try {
       const { data, error } = await supabase.functions.invoke("sentiment-analysis", {
-        body: {
-          inputs: response,
-        },
+        body: 
+          { inputs: response }
       });
       
       if (error) throw error;
@@ -107,7 +107,7 @@ export default function SurveyDetailScreen() {
       // Load survey details
       const { data: surveyData, error: surveyError } = await supabase
         .from('surveys')
-        .select('id, title, description, start_date, end_date, type')
+        .select('*')
         .eq('id', id)
         .single();
 
@@ -319,7 +319,7 @@ export default function SurveyDetailScreen() {
                 placeholderTextColor="#999"
                 value={responses.find(r => r.question_id === question.id)?.response as string}
                 onChangeText={(text) => updateResponse(question.id, text)}
-                editable={!isCompleted}
+                editable={!isCompleted && survey?.status !== 'Closed'}
               />
             )}
           </View>
