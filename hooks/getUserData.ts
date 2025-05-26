@@ -63,7 +63,7 @@ export function getUserData() {
           setupSubscription(user.id);
         }
       } catch (err) {
-        console.error('Error loading user data:', err);
+        // console.error('Error loading user data:', err);
         if (mounted) {
           setError(err instanceof Error ? err : new Error('Failed to load user data'));
         }

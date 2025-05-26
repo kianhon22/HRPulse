@@ -273,7 +273,7 @@ export default function Home() {
   function isWithinWorkHours() {
     const now = new Date();
     const hour = now.getHours();
-    return hour ;
+    return hour >= 6 && hour <= 22;
   }
 
   async function handleCheckIn() {
