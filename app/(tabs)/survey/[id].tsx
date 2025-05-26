@@ -12,7 +12,6 @@ interface Survey {
   start_date: string;
   end_date: string;
   status: string;
-  type: 'Rating' | 'Text';
 }
 
 interface Question {
@@ -20,6 +19,7 @@ interface Question {
   survey_id: string;
   question: string;
   category?: string;
+  type: 'rating' | 'text';
 }
 
 interface Response {
@@ -40,9 +40,7 @@ export default function SurveyDetailScreen() {
   
   // Group questions based on SURVEY type
   const groupedQuestions = useMemo(() => {
-    if (!questions || questions.length === 0 || !survey?.type) return [];
-
-    // For both Rating and Text surveys, group all questions by category
+    if (!questions || questions.length === 0) return [];
     const categoriesMap = new Map<string, Question[]>();
     questions.forEach(q => {
       const categoryKey = q.category || 'Uncategorized';
@@ -52,7 +50,7 @@ export default function SurveyDetailScreen() {
       categoriesMap.get(categoryKey)!.push(q);
     });
     return Array.from(categoriesMap.values()).filter(group => group.length > 0);
-  }, [questions, survey?.type]); // Depend on questions and survey type
+  }, [questions]);
   
   // Calculate totalPages and currentQuestions based on the memoized groupedQuestions
   const totalPages = groupedQuestions.length;
@@ -147,7 +145,7 @@ export default function SurveyDetailScreen() {
         // Initialize responses with user's previous responses
         setResponses(questionsData.map(q => ({
           question_id: q.id,
-          response: responsesMap[q.id] !== undefined ? responsesMap[q.id] : (surveyData.type === 'Rating' ? 0 : '')
+          response: responsesMap[q.id] !== undefined ? responsesMap[q.id] : (q.type === 'Rating' ? 0 : '')
         })));
       } else {
         setIsCompleted(false);
@@ -155,7 +153,7 @@ export default function SurveyDetailScreen() {
         // Initialize empty responses
         setResponses(questionsData.map(q => ({
           question_id: q.id,
-          response: surveyData.type === 'Rating' ? 0 : ''
+          response: q.type === 'Rating' ? 0 : ''
         })));
       }
     } catch (error) {
@@ -186,10 +184,10 @@ export default function SurveyDetailScreen() {
       const hasMissingResponses = allQuestionIds.some(qid => !answeredQuestionIds.has(qid));
       const hasEmptyResponses = responses.some(r => {
         const question = questions.find(q => q.id === r.question_id);
-        if (!question) return true; // Should not happen
-        if (survey?.type === 'Text') return String(r.response).trim() === '';
-        if (survey?.type === 'Rating') return r.response === 0; // Assuming 0 means unanswered
-        return true; // Default to invalid for unknown types
+        if (!question) return true;
+        if (question.type === 'text') return String(r.response).trim() === '';
+        if (question.type === 'rating') return r.response === 0;
+        return true;
       });
 
       if (hasMissingResponses || hasEmptyResponses) {
@@ -201,9 +199,10 @@ export default function SurveyDetailScreen() {
       // For Text surveys, perform sentiment analysis on each response
       let responseData = [];
       
-      if (survey?.type === 'Text') {
-        // Process text responses with sentiment analysis
-        for (const r of responses) {
+      for (const r of responses) {
+        const question = questions.find(q => q.id === r.question_id);
+        if (!question) continue;
+        if (question.type === 'text') {
           const responseText = String(r.response).trim();
           let sentimentData = null;
           
@@ -226,14 +225,14 @@ export default function SurveyDetailScreen() {
             response: r.response,
             sentiment: sentimentData
           });
+        } else {
+          responseData.push({
+            survey_id: id,
+            question_id: r.question_id,
+            user_id: user.id,
+            response: r.response
+          });
         }
-      } else {
-        responseData = responses.map(r => ({
-          survey_id: id,
-          question_id: r.question_id,
-          user_id: user.id,
-          response: r.response
-        }));
       }
 
       // Insert all responses with sentiment data if applicable
@@ -289,7 +288,7 @@ export default function SurveyDetailScreen() {
               {(currentPage * 5) + index + 1}. {question.question}
             </Text>
 
-            {survey?.type === 'Rating' && (
+            {question.type === 'rating' && (
               <View style={styles.ratingContainer}>
                 {['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'].map((option, rating) => {
                   const isSelected = responses.find(r => r.question_id === question.id)?.response === rating + 1;
@@ -310,7 +309,7 @@ export default function SurveyDetailScreen() {
               </View>
             )}
 
-            {survey?.type === 'Text' && (
+            {question.type === 'text' && (
               <TextInput
                 style={[styles.textInput, isCompleted && styles.readonlyInput]}
                 multiline
@@ -332,7 +331,7 @@ export default function SurveyDetailScreen() {
             disabled={currentPage === 0}
             style={[styles.navButton, currentPage === 0 && styles.disabledButton]}
           >
-            <FontAwesome name="arrow-left" size={16} color={currentPage === 0 ? "#ccc" : "#333"} />
+            <FontAwesome name="arrow-left" size={14} color={currentPage === 0 ? "#b3b3b3" : "white"} />
             <Text style={[styles.navButtonText, currentPage === 0 && styles.disabledText]}>Back</Text>
           </TouchableOpacity>
           
@@ -346,7 +345,7 @@ export default function SurveyDetailScreen() {
             style={[styles.navButton, isLastPage && styles.disabledButton]}
           >
             <Text style={[styles.navButtonText, isLastPage && styles.disabledText]}>Next</Text>
-            <FontAwesome name="arrow-right" size={16} color={isLastPage ? "#ccc" : "#333"} />
+            <FontAwesome name="arrow-right" size={14} color={isLastPage ? "#b3b3b3" : "white"} />
           </TouchableOpacity>
         </View>
 
@@ -515,27 +514,29 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   pageIndicator: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 14
   },
   navButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    color: 'white',
+    backgroundColor: '#6A1B9A',
   },
   disabledButton: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f2f2f2',
   },
   navButtonText: {
     marginBottom: 0,
     marginHorizontal: 4,
     fontSize: 14,
-    color: '#333',
+    fontWeight: '600',
+    color: 'white',
   },
   disabledText: {
-    color: '#ccc',
+    color: '#b3b3b3',
+    fontWeight: '600'
   },
   readonlyInput: {
     backgroundColor: '#f9f9f9',
