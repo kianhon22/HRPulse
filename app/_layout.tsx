@@ -15,7 +15,7 @@ export {
 } from 'expo-router';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+// SplashScreen.preventAutoHideAsync();
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];

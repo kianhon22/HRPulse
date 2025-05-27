@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Modal, Alert } from 'react-native';
 import { Link } from 'expo-router';
 import { supabase } from '../../../supabase';
 import { FontAwesome } from '@expo/vector-icons';
@@ -38,6 +38,8 @@ export default function LeaveHistoryPage() {
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [selectedCancelId, setSelectedCancelId] = useState<string | null>(null);
 
   // Format date for display
   const formatDisplayDate = (date: Date | null) => {
@@ -166,6 +168,61 @@ export default function LeaveHistoryPage() {
     });
   }
 
+  // Cancel leave application
+  const handleCancelLeave = async (leaveId: string) => {
+    setSelectedCancelId(leaveId);
+    setCancelModalVisible(true);
+  };
+
+  const confirmCancelLeave = async () => {
+    if (!selectedCancelId) return;
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('leaves')
+        .update({ status: 'Cancelled' })
+        .eq('id', selectedCancelId);
+      if (error) throw error;
+      setCancelModalVisible(false);
+      setSelectedCancelId(null);
+      await loadLeaveApplications();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to cancel leave.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelModal = (
+    <Modal
+      visible={cancelModalVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setCancelModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 10 }}>Cancel Leave?</Text>
+          <Text style={{ marginBottom: 20 }}>Are you sure you want to cancel this leave application?</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#eee', marginRight: 10 }]}
+              onPress={() => setCancelModalVisible(false)}
+            >
+              <Text style={{ color: '#333' }}>No</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, { backgroundColor: '#F44336' }]}
+              onPress={confirmCancelLeave}
+            >
+              <Text style={{ color: 'white' }}>Yes, Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -273,10 +330,21 @@ export default function LeaveHistoryPage() {
                 <Text style={styles.reasonText} numberOfLines={2}>
                   {application.reason}
                 </Text>
+
+                {/* Cancel button for Pending status */}
+                {application.status === 'Pending' && (
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => handleCancelLeave(application.id)}
+                  >
+                    <FontAwesome name="times-circle" size={22} color="#F44336" />
+                  </TouchableOpacity>
+                )}
               </View>
             ))
           )}
         </View>
+        {cancelModal}
       </RefreshWrapper>
     </View>
   );
@@ -424,5 +492,38 @@ const styles = StyleSheet.create({
   emptyStateText: {
     color: '#999',
     fontSize: 16,
+  },
+  cancelButton: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    zIndex: 2,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 2,
+    elevation: 3,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 24,
+    width: 300,
+    alignItems: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 8,
   },
 }); 
