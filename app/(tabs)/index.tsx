@@ -335,7 +335,7 @@ export default function Home() {
 
   async function handleCheckOut() {
     if (!isWithinWorkHours()) {
-      Alert.alert('Outside Work Hours', 'Check-out is only available between 7 AM and 10 PM');
+      Alert.alert('Outside Work Hours', 'Check-out is only available between 6 AM and 10 PM');
       return;
     }
 

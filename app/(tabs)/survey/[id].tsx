@@ -267,6 +267,13 @@ export default function SurveyDetailScreen() {
           <FontAwesome name="arrow-left" size={20} color="#333" />
         </TouchableOpacity>
         <Text style={styles.title}>{survey?.title}</Text>
+        {/* Temporary debug button - remove after testing
+        <TouchableOpacity 
+          onPress={testSentimentAnalysis}
+          style={{ padding: 8, backgroundColor: '#ff6b6b', borderRadius: 4 }}
+        >
+          <Text style={{ color: 'white', fontSize: 12 }}>Test</Text>
+        </TouchableOpacity> */}
       </View>
 
       <ScrollView style={styles.content}>

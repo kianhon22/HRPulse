@@ -156,7 +156,7 @@ export default function LeaveHistoryPage() {
       case 'Rejected':
         return '#F44336';
       default:
-        return '#999';
+        return '#808080';
     }
   }
 
@@ -169,7 +169,7 @@ export default function LeaveHistoryPage() {
   }
 
   // Cancel leave application
-  const handleCancelLeave = async (leaveId: string) => {
+  const handleCancelLeave = async (leaveId: any) => {
     setSelectedCancelId(leaveId);
     setCancelModalVisible(true);
   };
@@ -215,7 +215,7 @@ export default function LeaveHistoryPage() {
               style={[styles.modalButton, { backgroundColor: '#F44336' }]}
               onPress={confirmCancelLeave}
             >
-              <Text style={{ color: 'white' }}>Yes, Cancel</Text>
+              <Text style={{ color: 'white' }}>Confirm</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -337,7 +337,7 @@ export default function LeaveHistoryPage() {
                     style={styles.cancelButton}
                     onPress={() => handleCancelLeave(application.id)}
                   >
-                    <FontAwesome name="times-circle" size={22} color="#F44336" />
+                    <FontAwesome name="trash" size={19} color="white" />
                   </TouchableOpacity>
                 )}
               </View>
@@ -498,9 +498,9 @@ const styles = StyleSheet.create({
     bottom: 10,
     right: 10,
     zIndex: 2,
-    backgroundColor: 'white',
+    backgroundColor: 'red',
     borderRadius: 20,
-    padding: 2,
+    padding: 5,
     elevation: 3,
   },
   modalOverlay: {
