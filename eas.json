@@ -15,6 +15,16 @@
         "buildType": "apk"
       }
     },
+    "debug": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "__DEV__": "true"
+      }
+    },
     "production": {
       "autoIncrement": true
     }

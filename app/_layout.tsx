@@ -24,6 +24,13 @@ function TabBarIcon(props: {
   return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
 }
 
+// Global error handler for debugging
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  originalConsoleError(...args);
+  // In production, you could send this to a remote logging service
+};
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     ...Ionicons.font,
@@ -36,9 +43,13 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [redirecting, setRedirecting] = useState(false);
   const hasRedirected = useRef(false);
+  const [debugInfo, setDebugInfo] = useState('Initializing...');
 
   useEffect(() => {
-    if (error) throw error;
+    if (error) {
+      setDebugInfo(`Font loading error: ${error.message}`);
+      throw error;
+    }
   }, [error]);
 
   useEffect(() => {
@@ -82,11 +93,14 @@ export default function RootLayout() {
 
     // Initial session check
     console.log('Checking initial session...');
+    setDebugInfo('Checking Supabase session...');
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('Initial session check complete:', session);
+      setDebugInfo(`Session check complete: ${session ? 'Logged in' : 'Not logged in'}`);
       handleRedirect(session);
     }).catch((error) => {
       console.error('Error getting session:', error);
+      setDebugInfo(`Supabase error: ${error.message}`);
       setInitialSessionChecked(true); // Still mark as checked to prevent infinite loading
     });
 
@@ -137,8 +151,20 @@ export default function RootLayout() {
 
   if (!loaded || !initialSessionChecked || redirecting) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-        <Text>Loading...</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff', padding: 20 }}>
+        <Text style={{ fontSize: 18, marginBottom: 10 }}>Loading...</Text>
+        <Text style={{ fontSize: 14, color: '#666', textAlign: 'center' }}>
+          Fonts loaded: {loaded ? 'Yes' : 'No'}
+        </Text>
+        <Text style={{ fontSize: 14, color: '#666', textAlign: 'center' }}>
+          Session checked: {initialSessionChecked ? 'Yes' : 'No'}
+        </Text>
+        <Text style={{ fontSize: 14, color: '#666', textAlign: 'center' }}>
+          Redirecting: {redirecting ? 'Yes' : 'No'}
+        </Text>
+        <Text style={{ fontSize: 12, color: '#999', textAlign: 'center', marginTop: 10 }}>
+          Debug: {debugInfo}
+        </Text>
       </View>
     );
   }
