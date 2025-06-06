@@ -8,6 +8,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useColorScheme, View, Text } from 'react-native';
 import { supabase } from '../supabase';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -44,6 +45,9 @@ export default function RootLayout() {
   const [redirecting, setRedirecting] = useState(false);
   const hasRedirected = useRef(false);
   const [debugInfo, setDebugInfo] = useState('Initializing...');
+  
+  // Initialize push notifications
+  const { expoPushToken } = usePushNotifications();
 
   useEffect(() => {
     if (error) {

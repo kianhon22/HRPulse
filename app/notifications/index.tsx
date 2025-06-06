@@ -1,50 +1,145 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../../supabase';
+import { format } from 'date-fns';
 
 interface Notification {
   id: string;
   title: string;
   message: string;
-  timestamp: string;
-  isRead: boolean;
+  module: string;
+  module_id?: string;
+  is_read: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function NotificationsScreen() {
-  // Dummy data - replace with real data from your backend
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      title: 'Leave Approved',
-      message: 'Your leave request for 12th May has been approved.',
-      timestamp: '2 hours ago',
-      isRead: false,
-    },
-    {
-      id: '2',
-      title: 'New Survey Available',
-      message: 'Please complete the employee satisfaction survey.',
-      timestamp: '1 day ago',
-      isRead: true,
-    },
-    {
-      id: '3',
-      title: 'Attendance Reminder',
-      message: 'Don\'t forget to check in today.',
-      timestamp: '2 days ago',
-      isRead: true,
-    },
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleNotificationPress = (id: string) => {
-    setNotifications(notifications.map(notif => 
-      notif.id === id ? { ...notif, isRead: true } : notif
-    ));
+  const fetchNotifications = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        return;
+      }
+
+      setNotifications(data || []);
+    } catch (error) {
+      console.error('Error in fetchNotifications:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+
+    // Subscribe to real-time notifications
+    const setupRealtimeSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const subscription = supabase
+          .channel('notifications')
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'notifications',
+              filter: `user_id=eq.${user.id}`,
+            },
+            (payload) => {
+              console.log('New notification received:', payload);
+              setNotifications(current => [payload.new as Notification, ...current]);
+            }
+          )
+          .subscribe();
+
+        return () => {
+          subscription.unsubscribe();
+        };
+      }
+    };
+
+    setupRealtimeSubscription();
+  }, []);
+
+  const handleNotificationPress = async (id: string) => {
+    try {
+      // Update notification as read in database
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating notification:', error);
+        return;
+      }
+
+      // Update local state
+      setNotifications(notifications.map(notif => 
+        notif.id === id ? { ...notif, is_read: true } : notif
+      ));
+    } catch (error) {
+      console.error('Error in handleNotificationPress:', error);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchNotifications();
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffInMs = now.getTime() - date.getTime();
+      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+      const diffInHours = Math.floor(diffInMinutes / 60);
+      const diffInDays = Math.floor(diffInHours / 24);
+
+      if (diffInMinutes < 60) {
+        return `${diffInMinutes} minutes ago`;
+      } else if (diffInHours < 24) {
+        return `${diffInHours} hours ago`;
+      } else if (diffInDays < 7) {
+        return `${diffInDays} days ago`;
+      } else {
+        return format(date, 'MMM dd, yyyy');
+      }
+    } catch (error) {
+      return 'Recently';
+    }
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {notifications.length === 0 ? (
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      {loading ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Loading notifications...</Text>
+        </View>
+      ) : notifications.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No new notifications</Text>
         </View>
@@ -54,7 +149,7 @@ export default function NotificationsScreen() {
             key={notification.id}
             style={[
               styles.notificationItem,
-              !notification.isRead && styles.unreadItem
+              !notification.is_read && styles.unreadItem
             ]}
             onPress={() => handleNotificationPress(notification.id)}
           >
@@ -62,18 +157,20 @@ export default function NotificationsScreen() {
               <View style={styles.notificationHeader}>
                 <Text style={[
                   styles.notificationTitle,
-                  !notification.isRead && styles.unreadText
+                  !notification.is_read && styles.unreadText
                 ]}>
                   {notification.title}
                 </Text>
-                {!notification.isRead && (
+                {!notification.is_read && (
                   <View style={styles.unreadDot} />
                 )}
               </View>
               <Text style={styles.notificationMessage}>
                 {notification.message}
               </Text>
-              <Text style={styles.timestamp}>{notification.timestamp}</Text>
+              <Text style={styles.timestamp}>
+                {formatTimestamp(notification.created_at)}
+              </Text>
             </View>
           </TouchableOpacity>
         ))
