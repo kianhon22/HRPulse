@@ -5,7 +5,7 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState, useRef } from 'react';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, View, Text } from 'react-native';
 import { supabase } from '../supabase';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
@@ -15,7 +15,7 @@ export {
 } from 'expo-router';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-// SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync();
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -43,7 +43,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (loaded) {
-      SplashScreen.hideAsync();
+      // Add a small delay before hiding splash screen in production builds
+      setTimeout(() => {
+        SplashScreen.hideAsync();
+      }, 500);
     }
   }, [loaded]);
 
@@ -53,30 +56,38 @@ export default function RootLayout() {
       setInitialSessionChecked(true); // Mark that session has been checked
 
       const currentSegment = segments[0] || '';
-      // console.log('Session:', currentSession);
-      // console.log('Current segment:', currentSegment);
+      console.log('Session:', currentSession);
+      console.log('Current segment:', currentSegment);
       
-      // If not logged in and not already on login, register, or reset-password, redirect to login
-      if (
-        !currentSession &&
-        currentSegment !== 'login' &&
-        currentSegment !== 'register' &&
-        currentSegment !== 'reset-password'
-      ) {
-        router.replace('/login');
-      }
-      // If logged in and on login/register/reset-password, redirect to home
-      if (
-        currentSession &&
-        (currentSegment === 'login' || currentSegment === 'register' || currentSegment === 'reset-password')
-      ) {
-        router.replace('/');
-      }
+      // Use setTimeout to ensure navigation happens after component mounting
+      setTimeout(() => {
+        // If not logged in and not already on login, register, or reset-password, redirect to login
+        if (
+          !currentSession &&
+          currentSegment !== 'login' &&
+          currentSegment !== 'register' &&
+          currentSegment !== 'reset-password'
+        ) {
+          router.replace('/login');
+        }
+        // If logged in and on login/register/reset-password, redirect to home
+        if (
+          currentSession &&
+          (currentSegment === 'login' || currentSegment === 'register' || currentSegment === 'reset-password')
+        ) {
+          router.replace('/');
+        }
+      }, 100);
     };
 
     // Initial session check
+    console.log('Checking initial session...');
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check complete:', session);
       handleRedirect(session);
+    }).catch((error) => {
+      console.error('Error getting session:', error);
+      setInitialSessionChecked(true); // Still mark as checked to prevent infinite loading
     });
 
     // Listen for auth state changes
@@ -92,36 +103,44 @@ export default function RootLayout() {
   useEffect(() => {
     if (!loaded || !initialSessionChecked) return;
     const currentSegment = segments[0] || '';
-    // If not logged in and not on login/register/reset-password, force redirect
-    if (
-      !session &&
-      currentSegment !== 'login' &&
-      currentSegment !== 'register' &&
-      currentSegment !== 'reset-password' &&
-      !hasRedirected.current
-    ) {
-      setRedirecting(true);
-      hasRedirected.current = true;
-      router.replace('/login');
-      return;
-    }
-    // If logged in and on login/register/reset-password, redirect to home
-    if (
-      session &&
-      (currentSegment === 'login' || currentSegment === 'register' || currentSegment === 'reset-password') &&
-      !hasRedirected.current
-    ) {
-      setRedirecting(true);
-      hasRedirected.current = true;
-      router.replace('/');
-      return;
-    }
-    setRedirecting(false);
-    hasRedirected.current = false;
+    
+    // Use setTimeout to ensure navigation happens after component mounting
+    setTimeout(() => {
+      // If not logged in and not on login/register/reset-password, force redirect
+      if (
+        !session &&
+        currentSegment !== 'login' &&
+        currentSegment !== 'register' &&
+        currentSegment !== 'reset-password' &&
+        !hasRedirected.current
+      ) {
+        setRedirecting(true);
+        hasRedirected.current = true;
+        router.replace('/login');
+        return;
+      }
+      // If logged in and on login/register/reset-password, redirect to home
+      if (
+        session &&
+        (currentSegment === 'login' || currentSegment === 'register' || currentSegment === 'reset-password') &&
+        !hasRedirected.current
+      ) {
+        setRedirecting(true);
+        hasRedirected.current = true;
+        router.replace('/');
+        return;
+      }
+      setRedirecting(false);
+      hasRedirected.current = false;
+    }, 100);
   }, [session, loaded, initialSessionChecked, segments]);
 
   if (!loaded || !initialSessionChecked || redirecting) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <Text>Loading...</Text>
+      </View>
+    );
   }
 
   const currentSegment = segments[0] || '';
