@@ -14,7 +14,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/external_icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.yourcompany.hrpulse"
