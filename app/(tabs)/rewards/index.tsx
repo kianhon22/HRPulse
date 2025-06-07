@@ -296,7 +296,9 @@ export default function RewardsCatalogScreen() {
               style={styles.closeButton}
               onPress={() => setModalVisible(false)}
             >
-              <FontAwesome5 name="times" size={22} color="#333" />
+              <View style={styles.closeButtonCircle}>
+                <FontAwesome5 name="times" size={18} color="white" />
+              </View>
             </TouchableOpacity>
             
             {selectedReward && (
@@ -317,20 +319,14 @@ export default function RewardsCatalogScreen() {
                 <Text style={styles.descriptionTitle}>Description</Text>
                 <Text style={styles.descriptionText}>{selectedReward.description}</Text>
                 
-                <View style={styles.balanceContainer}>
-                  <Text style={styles.balanceText}>
-                    Your Balance: <Text style={styles.balanceAmount}>{userPointsNumber} points</Text>
-                  </Text>
-                  
-                  {selectedReward.points > userPointsNumber ? (
-                    <View style={styles.insufficientContainer}>
-                      <FontAwesome5 name="exclamation-circle" size={14} color="#FF3B30" />
-                      <Text style={styles.insufficientText}>
-                        You need {selectedReward.points - userPointsNumber} more points
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
+                {selectedReward.points > userPointsNumber && (
+                  <View style={styles.insufficientContainer}>
+                    <FontAwesome5 name="exclamation-circle" size={14} color="#FF3B30" />
+                    <Text style={styles.insufficientText}>
+                      You need {selectedReward.points - userPointsNumber} more points
+                    </Text>
+                  </View>
+                )}
                 
                 <View style={styles.actionButtons}>
                   <TouchableOpacity 
@@ -552,6 +548,14 @@ const styles = StyleSheet.create({
     zIndex: 1,
     padding: 6,
   },
+  closeButtonCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#6A1B9A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   modalImage: {
     width: '100%',
     height: 200,
@@ -586,20 +590,6 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 22,
     marginBottom: 20,
-  },
-  balanceContainer: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 24,
-  },
-  balanceText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  balanceAmount: {
-    fontWeight: 'bold',
-    color: '#333',
   },
   insufficientContainer: {
     flexDirection: 'row',

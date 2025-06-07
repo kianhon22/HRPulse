@@ -4,6 +4,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '../../../supabase';
 import { FontAwesome } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface Survey {
   id: string;
@@ -158,14 +159,30 @@ export default function SurveyDetailScreen() {
       }
     } catch (error) {
       console.error('Error loading survey:', error);
-      Alert.alert('Error', 'Failed to load survey details.');
+      Alert.alert('Error', 'Failed to load survey details');
       router.back();
     } finally {
       setLoading(false);
     }
   }
 
+  // Text validation helper function
+  const validateTextInput = (text: string): boolean => {
+    // Check if text contains at least some alphabetic characters
+    const alphabeticRegex = /[a-zA-Z]/;
+    return alphabeticRegex.test(text.trim());
+  };
+
   function updateResponse(questionId: string, value: string | number) {
+    // For text inputs, validate alphabetic content
+    if (typeof value === 'string') {
+      const trimmedValue = value.trim();
+      if (trimmedValue && !validateTextInput(trimmedValue)) {
+        Alert.alert('Invalid Input', 'Please do not just provide feedback in numbers');
+        return;
+      }
+    }
+    
     setResponses(prev => 
       prev.map(r => r.question_id === questionId ? { ...r, response: value } : r)
     );
@@ -177,22 +194,46 @@ export default function SurveyDetailScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Validate *all* responses before submitting
+      // Enhanced validation for rating questions (mandatory) and text questions (optional but must be alphabetic if provided)
       const allQuestionIds = questions.map(q => q.id);
       const answeredQuestionIds = new Set(responses.map(r => r.question_id));
       
       const hasMissingResponses = allQuestionIds.some(qid => !answeredQuestionIds.has(qid));
-      const hasEmptyResponses = responses.some(r => {
+      const hasInvalidResponses = responses.some(r => {
         const question = questions.find(q => q.id === r.question_id);
         if (!question) return true;
-        if (question.type === 'text') return String(r.response).trim() === '';
-        if (question.type === 'rating') return r.response === 0;
+        
+        if (question.type === 'rating') {
+          // Rating questions are mandatory
+          return r.response === 0;
+        }
+        
+        if (question.type === 'text') {
+          // Text questions are optional, but if provided, must contain alphabetic characters
+          const textResponse = String(r.response).trim();
+          if (textResponse) {
+            return !validateTextInput(textResponse);
+          }
+          // Empty text responses are allowed (optional)
+          return false;
+        }
+        
         return true;
       });
 
-      if (hasMissingResponses || hasEmptyResponses) {
-        Alert.alert('Error', 'Please answer all questions before submitting.');
-        setSubmitting(false); // Reset submitting state
+      if (hasMissingResponses || hasInvalidResponses) {
+        const ratingQuestions = questions.filter(q => q.type === 'rating');
+        const unansweredRatings = ratingQuestions.filter(q => {
+          const response = responses.find(r => r.question_id === q.id);
+          return !response || response.response === 0;
+        });
+
+        if (unansweredRatings.length > 0) {
+          Alert.alert('Required Fields', 'Please answer all rating questions');
+        } else {
+          Alert.alert('Invalid Input', 'Please do not just provide feedback in numbers');
+        }
+        setSubmitting(false);
         return;
       }
 
@@ -246,7 +287,7 @@ export default function SurveyDetailScreen() {
       router.back();
     } catch (error) {
       console.error('Error submitting survey:', error);
-      Alert.alert('Error', 'Failed to submit survey. Please try again.');
+      Alert.alert('Error', 'Failed to submit survey. Please try again');
     } finally {
       setSubmitting(false);
     }
@@ -254,45 +295,61 @@ export default function SurveyDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6A1B9A" />
-      </View>
+      <LinearGradient
+        colors={['#6A1B9A', '#8E24AA']}
+        style={styles.loadingContainer}
+      >
+        <ActivityIndicator size="large" color="white" />
+      </LinearGradient>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <LinearGradient
+      colors={['#f8f9fa', '#ffffff']}
+      style={styles.container}
+    >
+      <LinearGradient
+        colors={['#6A1B9A', '#8E24AA']}
+        style={styles.header}
+      >
         <TouchableOpacity onPress={() => router.back()}>
-          <FontAwesome name="arrow-left" size={20} color="#333" />
+          <FontAwesome name="arrow-left" size={20} color="white" />
         </TouchableOpacity>
-        <Text style={styles.title}>{survey?.title}</Text>
-        {/* Temporary debug button - remove after testing
-        <TouchableOpacity 
-          onPress={testSentimentAnalysis}
-          style={{ padding: 8, backgroundColor: '#ff6b6b', borderRadius: 4 }}
-        >
-          <Text style={{ color: 'white', fontSize: 12 }}>Test</Text>
-        </TouchableOpacity> */}
-      </View>
+        <View style={styles.headerTitleWrapper}>
+    <Text style={styles.title}>{survey?.title}</Text>
+  </View>
+  <View style={{ width: 20 }} />
+      </LinearGradient>
 
       <ScrollView style={styles.content}>
+        {/* Survey Description */}
         {survey?.description && (
-          <Text style={styles.description}>{survey?.description}</Text>
+          <View style={styles.descriptionContainer}>
+            <Text style={styles.description}>{survey?.description}</Text>
+          </View>
         )}
         
         {currentQuestions.length > 0 && (
-          <View style={styles.categoryHeader}>
+          <LinearGradient
+            colors={['#F3E5F5', '#ffffff']}
+            style={styles.categoryHeader}
+          >
             <Text style={styles.categoryTitle}>
               {`Category: ${currentQuestions[0].category || 'Uncategorized'}`}
             </Text>
-          </View>
+          </LinearGradient>
         )}
 
         {currentQuestions.map((question, index) => (
-          <View key={question.id} style={styles.questionCard}>
+          <LinearGradient
+            key={question.id}
+            colors={['#ffffff', '#f8f9fa']}
+            style={styles.questionCard}
+          >
             <Text style={styles.questionText}>
               {(currentPage * 5) + index + 1}. {question.question}
+              {question.type === 'rating' && <Text style={styles.requiredAsterisk}> *</Text>}
             </Text>
 
             {question.type === 'rating' && (
@@ -303,8 +360,8 @@ export default function SurveyDetailScreen() {
                     <TouchableOpacity
                       key={rating}
                       style={[styles.ratingButton, isSelected && styles.selectedRating]}
-                      onPress={() => !isCompleted && updateResponse(question.id, rating + 1)}
-                      disabled={isCompleted}
+                      onPress={() => !isCompleted && survey?.status !== 'Closed' && updateResponse(question.id, rating + 1)}
+                      disabled={isCompleted || survey?.status === 'Closed'}
                     >
                       <View style={[styles.radioCircle, isSelected && styles.selectedRadioCircle]} />
                       <Text style={[styles.ratingText, isSelected && styles.selectedRatingText]}>
@@ -317,18 +374,23 @@ export default function SurveyDetailScreen() {
             )}
 
             {question.type === 'text' && (
-              <TextInput
-                style={[styles.textInput, isCompleted && styles.readonlyInput]}
-                multiline
-                numberOfLines={4}
-                placeholder="Enter your answer here..."
-                placeholderTextColor="#999"
-                value={responses.find(r => r.question_id === question.id)?.response as string}
-                onChangeText={(text) => updateResponse(question.id, text)}
-                editable={!isCompleted && survey?.status !== 'Closed'}
-              />
+              <View>
+                <TextInput
+                  style={[
+                    styles.textInput, 
+                    (isCompleted || survey?.status === 'Closed') && styles.readonlyInput
+                  ]}
+                  multiline
+                  numberOfLines={4}
+                  placeholder="Enter your answer here (optional)..."
+                  placeholderTextColor="#999"
+                  value={responses.find(r => r.question_id === question.id)?.response as string}
+                  onChangeText={(text) => updateResponse(question.id, text)}
+                  editable={!isCompleted && survey?.status !== 'Closed'}
+                />
+              </View>
             )}
-          </View>
+          </LinearGradient>
         ))}
 
         {/* Navigation buttons for pagination */}
@@ -338,47 +400,78 @@ export default function SurveyDetailScreen() {
             disabled={currentPage === 0}
             style={[styles.navButton, currentPage === 0 && styles.disabledButton]}
           >
-            <FontAwesome name="arrow-left" size={14} color={currentPage === 0 ? "#b3b3b3" : "white"} />
-            <Text style={[styles.navButtonText, currentPage === 0 && styles.disabledText]}>Back</Text>
+            <LinearGradient
+              colors={currentPage === 0 ? ['#f2f2f2', '#f2f2f2'] : ['#6A1B9A', '#8E24AA']}
+              style={styles.navButtonGradient}
+            >
+              <FontAwesome name="arrow-left" size={14} color={currentPage === 0 ? "#b3b3b3" : "white"} />
+              <Text style={[styles.navButtonText, currentPage === 0 && styles.disabledText]}>Back</Text>
+            </LinearGradient>
           </TouchableOpacity>
           
-          <Text style={styles.pageIndicator}>
-            Page {currentPage + 1} of {totalPages}
-          </Text>
+          <LinearGradient
+            colors={['#E8EAF6', '#ffffff']}
+            style={styles.pageIndicatorContainer}
+          >
+            <Text style={styles.pageIndicator}>
+              Page {currentPage + 1} of {totalPages}
+            </Text>
+          </LinearGradient>
           
           <TouchableOpacity 
             onPress={() => setCurrentPage(currentPage + 1)} 
             disabled={isLastPage}
             style={[styles.navButton, isLastPage && styles.disabledButton]}
           >
-            <Text style={[styles.navButtonText, isLastPage && styles.disabledText]}>Next</Text>
-            <FontAwesome name="arrow-right" size={14} color={isLastPage ? "#b3b3b3" : "white"} />
+            <LinearGradient
+              colors={isLastPage ? ['#f2f2f2', '#f2f2f2'] : ['#6A1B9A', '#8E24AA']}
+              style={styles.navButtonGradient}
+            >
+              <Text style={[styles.navButtonText, isLastPage && styles.disabledText]}>Next</Text>
+              <FontAwesome name="arrow-right" size={14} color={isLastPage ? "#b3b3b3" : "white"} />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
 
         {/* Submit button only on the last page */}
-        {isLastPage && totalPages > 0 && !isCompleted && (
+        {isLastPage && !isCompleted && survey?.status !== 'Closed' && (
           <TouchableOpacity
             style={[styles.submitButton, submitting && styles.buttonDisabled]}
             onPress={handleSubmit}
             disabled={submitting}
           >
-            {submitting ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.submitButtonText}>Submit Survey</Text>
-            )}
+            <LinearGradient
+              colors={submitting ? ['#B39DDB', '#B39DDB'] : ['#6A1B9A', '#8E24AA']}
+              style={styles.submitButtonGradient}
+            >
+              {submitting ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.submitButtonText}>Submit Survey</Text>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         )}
+
+        {/* Show message if survey is closed */}
+        {survey?.status === 'Closed' && (
+          <LinearGradient
+            colors={['#FFEBEE', '#ffffff']}
+            style={styles.closedMessage}
+          >
+            <Text style={styles.closedMessageText}>
+              This survey is no longer accepting responses
+            </Text>
+          </LinearGradient>
+        )}
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   loadingContainer: {
     flex: 1,
@@ -388,33 +481,50 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    position: 'relative',
     padding: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingTop: 10,
+  },
+  headerTitleWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 10, // matches paddingTop
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
-    marginLeft: 16,
-    flex: 1,
+    color: 'white',
+    textAlign: 'center',
   },
   content: {
     flex: 1,
     padding: 16,
   },
-  description: {
-    fontSize: 16,
-    color: '#666',
+  descriptionContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 10,
+    marginTop: -10,
     marginBottom: 10,
   },
+  description: {
+    fontStyle: 'italic',
+    fontSize: 16,
+    color: '#333',
+  },
   questionCard: {
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   questionText: {
     fontSize: 16,
@@ -422,26 +532,17 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 12,
   },
-  // optionsContainer: {
-  //   gap: 8,
-  // },
-  // optionButton: {
-  //   borderWidth: 1,
-  //   borderColor: '#ddd',
-  //   borderRadius: 8,
-  //   padding: 12,
-  // },
-  // selectedOption: {
-  //   backgroundColor: '#6A1B9A',
-  //   borderColor: '#6A1B9A',
-  // },
-  // optionText: {
-  //   fontSize: 14,
-  //   color: '#333',
-  // },
-  // selectedOptionText: {
-  //   color: 'white',
-  // },
+  requiredAsterisk: {
+    color: '#F44336',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  optionalLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
   ratingContainer: {
     marginTop: 12,
     gap: 10,
@@ -488,15 +589,17 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   submitButton: {
-    backgroundColor: '#6A1B9A',
     borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
     marginTop: 8,
     marginBottom: 24,
   },
+  submitButtonGradient: {
+    padding: 16,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
   buttonDisabled: {
-    backgroundColor: '#B39DDB',
+    opacity: 0.7,
   },
   submitButtonText: {
     color: 'white',
@@ -512,27 +615,35 @@ const styles = StyleSheet.create({
   },
   categoryHeader: {
     padding: 12,
-    backgroundColor: '#f0f0f0',
     borderRadius: 8,
+    marginBottom: 16,
   },
   categoryTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
   },
+  pageIndicatorContainer: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
   pageIndicator: {
-    fontSize: 14
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
   },
   navButton: {
+    borderRadius: 8,
+  },
+  navButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 8,
     borderRadius: 8,
-    color: 'white',
-    backgroundColor: '#6A1B9A',
   },
   disabledButton: {
-    backgroundColor: '#f2f2f2',
+    opacity: 0.7,
   },
   navButtonText: {
     marginBottom: 0,
@@ -549,5 +660,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     borderColor: '#eee',
     color: '#666',
+  },
+  closedMessage: {
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  closedMessageText: {
+    fontSize: 16,
+    color: '#d32f2f',
+    textAlign: 'center',
+    fontWeight: '500',
   },
 }); 

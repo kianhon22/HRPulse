@@ -10,6 +10,8 @@ import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { router } from 'expo-router';
 import { differenceInMinutes, differenceInYears } from 'date-fns';
+import { LinearGradient } from 'expo-linear-gradient';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 interface AttendanceRecord {
   id?: string;
@@ -128,6 +130,7 @@ export default function Home() {
   const carouselRef = useRef<FlatList>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const screenWidth = Dimensions.get('window').width;
+  const { expoPushToken } = usePushNotifications();
 
   const calculateRemainingLeaves = async () => {
     if (userData?.leave) {
@@ -412,6 +415,16 @@ export default function Home() {
     );
   }
 
+
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView 
@@ -423,8 +436,11 @@ export default function Home() {
           <HomeHeader />
 
           <View style={styles.content}>
-            {/* Attendance Card - Modern Design */}
-            <View style={styles.attendanceCardContainer}>
+            {/* Attendance Card - Modern Design with Gradient */}
+            <LinearGradient
+              colors={['#ffffff', '#f8f9fa']}
+              style={styles.attendanceCardContainer}
+            >
               <View style={styles.attendanceHeader}>
                 {/* <Text style={styles.attendanceTitle}>Today's Attendance</Text> */}
                 {/* <View style={styles.attendanceStatus}>
@@ -440,7 +456,12 @@ export default function Home() {
                   {todayRecord ? (
                     <View style={styles.attendanceDetails}>
                       <View style={styles.timeBlock}>
-                        <Ionicons name="time-outline" size={30} color="#6A1B9A" />
+                        <LinearGradient
+                          colors={['#6A1B9A', '#8E24AA']}
+                          style={styles.timeIconContainer}
+                        >
+                          <Ionicons name="time-outline" size={30} color="white" />
+                        </LinearGradient>
                         <View style={styles.timeInfo}>
                           <Text style={styles.timeLabel}>Checked In</Text>
                           <Text style={styles.timeValue}>{formatTime(todayRecord.check_in || '')}</Text>
@@ -450,7 +471,12 @@ export default function Home() {
                       {todayRecord.check_out && (
                         <>
                           <View style={styles.timeBlock}>
-                            <Ionicons name="time-outline" size={30} color="#6A1B9A" />
+                            <LinearGradient
+                              colors={['#6A1B9A', '#8E24AA']}
+                              style={styles.timeIconContainer}
+                            >
+                              <Ionicons name="time-outline" size={30} color="white" />
+                            </LinearGradient>
                             <View style={styles.timeInfo}>
                               <Text style={styles.timeLabel}>Checked Out</Text>
                               <Text style={styles.timeValue}>{formatTime(todayRecord.check_out)}</Text>
@@ -483,52 +509,78 @@ export default function Home() {
                       !todayRecord.check_out ? handleCheckOut : undefined}
                     disabled={loading || !!todayRecord?.check_out}
                   >
-                    <Ionicons 
-                      name={!todayRecord ? "log-in-outline" : 
-                        !todayRecord.check_out ? "log-out-outline" : "bag-check-outline"} 
-                      size={50} 
-                      color="white" 
-                    />
-                    <Text style={styles.attendanceButtonText}>
-                      {!todayRecord ? 'CHECK IN' : 
-                        !todayRecord.check_out ? 'CHECK OUT' : 'COMPLETED'}
-                    </Text>
+                    <LinearGradient
+                      colors={!todayRecord ? ['#4CAF50', '#66BB6A'] : 
+                        !todayRecord.check_out ? ['#FF9800', '#FFB74D'] : ['#6A1B9A', '#8E24AA']}
+                      style={styles.attendanceButtonGradient}
+                    >
+                      <Ionicons 
+                        name={!todayRecord ? "log-in-outline" : 
+                          !todayRecord.check_out ? "log-out-outline" : "bag-check-outline"} 
+                        size={50}
+                        color="white" 
+                      />
+                      <Text style={styles.attendanceButtonText}>
+                        {!todayRecord ? 'CHECK IN' : 
+                          !todayRecord.check_out ? 'CHECK OUT' : 'COMPLETED'}
+                      </Text>
+                    </LinearGradient>
                   </TouchableOpacity>
                 </View>
               </View>
-            </View>
+            </LinearGradient>
 
-            {/* Info Cards Row */}
+            {/* Info Cards Row with Gradients */}
             <View style={styles.infoCardsRow}>
-              <View style={styles.infoCard}>
-                <View style={styles.infoIconContainer}>
-                  <FontAwesome5 name="award" size={20} color="#6A1B9A" />
-                </View>
+              <LinearGradient
+                colors={['#E8F5E8', '#ffffff']}
+                style={styles.infoCard}
+              >
+                <LinearGradient
+                  colors={['#4CAF50', '#66BB6A']}
+                  style={styles.infoIconContainer}
+                >
+                  <FontAwesome5 name="award" size={20} color="white" />
+                </LinearGradient>
                 <Text style={styles.infoValue}>{userData?.points || 0}</Text>
                 <Text style={styles.infoLabel}>Total Points</Text>
                 <Text style={styles.infoSubtext}>
                   To be redeemed
                 </Text>
-              </View>
+              </LinearGradient>
 
-              <View style={styles.infoCard}>
-                <View style={styles.infoIconContainer}>
-                  <FontAwesome5 name="calendar-alt" size={20} color="#6A1B9A" />
-                </View>
+              <LinearGradient
+                colors={['#FFF3E0', '#ffffff']}
+                style={styles.infoCard}
+              >
+                <LinearGradient
+                  colors={['#FF9800', '#FFB74D']}
+                  style={styles.infoIconContainer}
+                >
+                  <FontAwesome5 name="calendar-alt" size={20} color="white" />
+                </LinearGradient>
                 <Text style={styles.infoValue}>{remainingLeaves}</Text>
                 <Text style={styles.infoLabel}>Remaining Leave</Text>
                 <Text style={styles.infoSubtext}>
                   {calculateServiceYears(userData?.join_company_date || '', userData?.left_company_date) + ' year service'}
                 </Text>
-              </View>
+              </LinearGradient>
             </View>
             
-            {/* Active Survey Section */}
+            {/* Active Survey Section with Gradient */}
             {activeSurvey && (
-              <View style={styles.sectionContainer}>
+              <LinearGradient
+                colors={['#F3E5F5', '#ffffff']}
+                style={styles.sectionContainer}
+              >
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Active Survey</Text>
-                  <FontAwesome5 name="poll-h" size={16} color="#6A1B9A" />
+                  <LinearGradient
+                    colors={['#6A1B9A', '#8E24AA']}
+                    style={styles.sectionIconContainer}
+                  >
+                    <FontAwesome5 name="poll-h" size={16} color="white" />
+                  </LinearGradient>
                 </View>
 
                 <View style={styles.surveyCard}>
@@ -548,20 +600,33 @@ export default function Home() {
                       style={[styles.surveyButton]} 
                       onPress={() => router.push(`/survey/${activeSurvey.id}`)}
                     >
-                      <Text style={styles.surveyButtonText}>
-                        {activeSurvey.is_completed ? 'View' : 'Start Now'}
-                      </Text>
+                      <LinearGradient
+                        colors={['#6A1B9A', '#8E24AA']}
+                        style={styles.surveyButtonGradient}
+                      >
+                        <Text style={styles.surveyButtonText}>
+                          {activeSurvey.is_completed ? 'View' : 'Start Now'}
+                        </Text>
+                      </LinearGradient>
                     </TouchableOpacity>
                   </View>
                 </View>
-              </View>
+              </LinearGradient>
             )}
 
-            {/* Announcements Section */}
-            <View style={[styles.sectionContainer, { paddingBottom: 5 }]}>
+            {/* Announcements Section with Gradient */}
+            <LinearGradient
+              colors={['#E3F2FD', '#ffffff']}
+              style={[styles.sectionContainer, { paddingBottom: 5 }]}
+            >
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Announcements</Text>
-                <FontAwesome5 name="bullhorn" size={16} color="#6A1B9A" />
+                <LinearGradient
+                  colors={['#2196F3', '#42A5F5']}
+                  style={styles.sectionIconContainer}
+                >
+                  <FontAwesome5 name="bullhorn" size={16} color="white" />
+                </LinearGradient>
               </View>
 
               {announcements.length === 0 ? (
@@ -572,7 +637,10 @@ export default function Home() {
                 <View style={styles.announcementsList}>
                   {announcements.map((announcement) => (
                     <View key={announcement.id} style={styles.announcementItem}>
-                      <View style={styles.announcementDot} />
+                      <LinearGradient
+                        colors={['#6A1B9A', '#8E24AA']}
+                        style={styles.announcementDot}
+                      />
                       <View style={styles.announcementContent}>
                         <Text style={styles.announcementText}>{announcement.description}</Text>
                         <Text style={styles.announcementDate}>
@@ -583,16 +651,24 @@ export default function Home() {
                   ))}
                 </View>
               )}
-            </View>
+            </LinearGradient>
 
             {/* Analytics Container (commented out in the original code) */}
             
-            {/* Articles Carousel */}
+            {/* Articles Carousel with Gradient */}
             {articles.length > 0 && (
-              <View style={styles.sectionContainer}>
+              <LinearGradient
+                colors={['#FFEBEE', '#ffffff']}
+                style={styles.sectionContainer}
+              >
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Articles For You</Text>
-                  <FontAwesome5 name="book-reader" size={16} color="#6A1B9A" />
+                  <LinearGradient
+                    colors={['#E91E63', '#F06292']}
+                    style={styles.sectionIconContainer}
+                  >
+                    <FontAwesome5 name="book-reader" size={16} color="white" />
+                  </LinearGradient>
                 </View>
                 
                 <View style={styles.carouselContainer}>
@@ -611,7 +687,7 @@ export default function Home() {
                   />
                   {renderDotIndicator()}
                 </View>
-              </View>
+              </LinearGradient>
             )}
           </View>
         </View>
@@ -641,7 +717,6 @@ const styles = StyleSheet.create({
   },
   // Attendance Card Styles
   attendanceCardContainer: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -753,14 +828,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 100,
     marginLeft: -20,
-    alignItems: 'center',
-    justifyContent: 'center',
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
   },
   checkInButton: {
     backgroundColor: '#4CAF50',
@@ -780,7 +848,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   sectionContainer: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -815,7 +882,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#6A1B9A',
     marginTop: 6,
     marginRight: 12,
   },
@@ -870,9 +936,6 @@ const styles = StyleSheet.create({
     color: '#888',
   },
   surveyButton: {
-    backgroundColor: '#6A1B9A',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
     borderRadius: 8,
   },
   surveyButtonText: {
@@ -889,7 +952,6 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     flex: 1,
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
@@ -904,7 +966,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f1f3f9',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
@@ -946,7 +1007,7 @@ const styles = StyleSheet.create({
   },
   // Articles Carousel Styles
   carouselContainer: {
-    marginTop: 10,
+    marginTop: 3,
   },
   carouselList: {
     paddingRight: 20,
@@ -954,7 +1015,8 @@ const styles = StyleSheet.create({
   articleItem: {
     width: Dimensions.get('window').width - 80,
     backgroundColor: '#fff',
-    marginLeft: 20,
+    marginLeft: 5,
+    marginBottom: 5,
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -1002,5 +1064,99 @@ const styles = StyleSheet.create({
     backgroundColor: '#6A1B9A',
     width: 12,
     height: 8,
+  },
+  timeIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sectionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  surveyButtonGradient: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  attendanceButtonGradient: {
+    width: 120,
+    height: 100,
+    marginLeft: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  debugCard: {
+    backgroundColor: 'white',
+    padding: 20,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  debugTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333',
+  },
+  testButton: {
+    backgroundColor: '#6A1B9A',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  testButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  tokenInfo: {
+    marginBottom: 15,
+  },
+  tokenLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#666',
+    marginBottom: 5,
+  },
+  tokenText: {
+    fontSize: 10,
+    color: '#333',
+    backgroundColor: '#f0f0f0',
+    padding: 8,
+    borderRadius: 4,
+    fontFamily: 'monospace',
+  },
+  debugLogs: {
+    marginTop: 15,
+    maxHeight: 300,
+  },
+  debugLogTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#666',
+    marginBottom: 5,
+  },
+  debugLogText: {
+    fontSize: 10,
+    color: '#333',
+    marginBottom: 2,
+    fontFamily: 'monospace',
   },
 });

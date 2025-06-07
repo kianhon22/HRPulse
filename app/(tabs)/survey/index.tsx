@@ -2,11 +2,12 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../../supabase';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
 import RefreshWrapper from '../../../components/RefreshWrapper';
 import { getUserData } from '../../../hooks/getUserData';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface Survey {
   id: string;
@@ -138,61 +139,76 @@ export default function SurveysScreen() {
             surveys.map((survey) => (
               <TouchableOpacity
                 key={survey.id}
-                style={styles.surveyCard}
                 onPress={() => {
                   router.push(`/survey/${survey.id}`);
                 }}
               >
-                <View style={styles.cardHeader}>
-                  <Text style={styles.surveyTitle}>{survey.title}</Text>
-                  {survey.is_completed ? (
-                    <View style={styles.completedBadge}>
-                      <Text style={styles.statusText}>Completed</Text>
-                    </View>
-                  ) : (survey.status == 'Closed' ? (
-                    <View style={styles.endedBadge}>
-                      <Text style={styles.statusText}>Closed</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.notCompletedBadge}>
-                      <Text style={styles.statusText}>Not Completed</Text>
-                    </View>
-                  ))}
-                </View>
-
-                {survey?.description &&
-                  <Text style={styles.surveyDescription} numberOfLines={2}>{survey.description} </Text>
-                }
-
-                <View style={styles.cardFooter}>
-                  <Text style={styles.dateText}>
-                    {format(new Date(survey.start_date), 'MMM dd, yyyy')} - {format(new Date(survey.end_date), 'MMM dd, yyyy')}
-                  </Text>
-                  <View style={styles.buttonContainer}>
-                    {survey.is_completed || survey.status == "Closed" ? (
-                      <TouchableOpacity 
-                        style={styles.viewButton}
-                        onPress={() => router.push(`/survey/${survey.id}`)}
+                <LinearGradient
+                  colors={['#ffffff', '#f8f9fa']}
+                  style={styles.surveyCard}
+                >
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.surveyTitle}>{survey.title}</Text>
+                    {survey.is_completed ? (
+                      <LinearGradient
+                        colors={['#4CAF50', '#66BB6A']}
+                        style={styles.completedBadge}
                       >
-                        <Text style={styles.buttonText}>View</Text>
-                      </TouchableOpacity>
-                    ) : survey.is_within_date ? (
-                      <TouchableOpacity 
-                        style={styles.startButton}
-                        onPress={() => router.push(`/survey/${survey.id}`)}
+                        <Text style={styles.statusText}>Completed</Text>
+                      </LinearGradient>
+                    ) : (survey.status == 'Closed' ? (
+                      <LinearGradient
+                        colors={['#F44336', '#FF6B6B']}
+                        style={styles.endedBadge}
                       >
-                        <Text style={styles.buttonText}>Start Now</Text>
-                      </TouchableOpacity>
+                        <Text style={styles.statusText}>Closed</Text>
+                      </LinearGradient>
                     ) : (
-                      <TouchableOpacity 
-                        style={styles.viewButton}
-                        onPress={() => router.push(`/survey/${survey.id}`)}
+                      <LinearGradient
+                        colors={['#FF9800', '#FFB74D']}
+                        style={styles.notCompletedBadge}
                       >
-                        <Text style={styles.buttonText}>View</Text>
-                      </TouchableOpacity>
-                    )}
+                        <Text style={styles.statusText}>Not Completed</Text>
+                      </LinearGradient>
+                    ))}
                   </View>
-                </View>
+
+                  {survey?.description &&
+                    <Text style={styles.surveyDescription} numberOfLines={2}>{survey.description} </Text>
+                  }
+
+                  <View style={styles.cardFooter}>
+                    <View style={styles.dateSection}>
+                      <Text style={styles.dateText}>
+                        {format(new Date(survey.start_date), 'MMM dd, yyyy')} - {format(new Date(survey.end_date), 'MMM dd, yyyy')}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.buttonSection}>
+                      {survey.is_completed || survey.status == "Closed" ? (
+                        <TouchableOpacity 
+                          style={styles.actionButton}
+                          onPress={() => router.push(`/survey/${survey.id}`)}
+                        >
+                          <Text style={styles.buttonText}><FontAwesome5 name="eye" size={14} color="white"/> View</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity 
+                          style={styles.actionButton}
+                          onPress={() => router.push(`/survey/${survey.id}`)}
+                        >
+                          <LinearGradient
+                            colors={['#6A1B9A', '#8E24AA']}
+                            style={styles.buttonGradient}
+                          >
+                            <FontAwesome5 name="play" size={14} color="white"/>
+                            <Text style={styles.buttonText}>Start Now</Text>
+                          </LinearGradient>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                </LinearGradient>
               </TouchableOpacity>
             ))
           )}
@@ -298,21 +314,35 @@ const styles = StyleSheet.create({
   buttonContainer: {
     marginTop: 10,
   },
-  startButton: {
-    backgroundColor: '#6A1B9A',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  viewButton: {
-    backgroundColor: '#757575',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
+  // startButton: {
+  //   backgroundColor: '#6A1B9A',
+  //   paddingHorizontal: 16,
+  //   paddingVertical: 8,
+  //   borderRadius: 8,
+  // },
   buttonText: {
     color: 'white',
     fontWeight: '600',
+  },
+  buttonGradient: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  dateSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  buttonSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButton: {
+    backgroundColor: '#6A1B9A',
+    marginTop: 10,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
     // anonymousBadge: {
   //   flexDirection: 'row',

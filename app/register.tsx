@@ -35,6 +35,12 @@ export default function Register() {
       return;
     }
 
+    // Email validation - must contain "@" symbol
+    if (!form.email.includes('@')) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
     if (form.password !== form.confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
@@ -95,44 +101,56 @@ export default function Register() {
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Join HRPulse Employee Portal</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Full Name *"
-          value={form.fullName}
-          onChangeText={(text) => setForm(prev => ({ ...prev, fullName: text }))}
-          autoCapitalize="words"
-          editable={!loading}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Full Name <Text style={styles.asterisk}>*</Text></Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your full name"
+            value={form.fullName}
+            onChangeText={(text) => setForm(prev => ({ ...prev, fullName: text }))}
+            autoCapitalize="words"
+            editable={!loading}
+          />
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email *"
-          value={form.email}
-          onChangeText={(text) => setForm(prev => ({ ...prev, email: text }))}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          editable={!loading}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Email <Text style={styles.asterisk}>*</Text></Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your email address"
+            value={form.email}
+            onChangeText={(text) => setForm(prev => ({ ...prev, email: text }))}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            editable={!loading}
+          />
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password *"
-          value={form.password}
-          onChangeText={(text) => setForm(prev => ({ ...prev, password: text }))}
-          secureTextEntry
-          autoCapitalize="none"
-          editable={!loading}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Password <Text style={styles.asterisk}>*</Text></Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your password"
+            value={form.password}
+            onChangeText={(text) => setForm(prev => ({ ...prev, password: text }))}
+            secureTextEntry
+            autoCapitalize="none"
+            editable={!loading}
+          />
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm Password *"
-          value={form.confirmPassword}
-          onChangeText={(text) => setForm(prev => ({ ...prev, confirmPassword: text }))}
-          secureTextEntry
-          autoCapitalize="none"
-          editable={!loading}
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Confirm Password <Text style={styles.asterisk}>*</Text></Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Confirm your password"
+            value={form.confirmPassword}
+            onChangeText={(text) => setForm(prev => ({ ...prev, confirmPassword: text }))}
+            secureTextEntry
+            autoCapitalize="none"
+            editable={!loading}
+          />
+        </View>
 
         <TextInput
           style={styles.input}
@@ -226,12 +244,24 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     color: '#666',
   },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  asterisk: {
+    color: '#F44336',
+    fontWeight: 'bold',
+  },
   input: {
     height: 50,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
-    marginBottom: 15,
     paddingHorizontal: 15,
     fontSize: 16,
     backgroundColor: '#f9f9f9',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '../../supabase';
 import { format } from 'date-fns';
 
@@ -14,6 +14,48 @@ interface Notification {
   created_at: string;
   updated_at: string;
 }
+
+const getModuleIcon = (module: string): string => {
+  switch (module.toLowerCase()) {
+    case 'leave':
+      return 'calendar';
+    case 'attendance':
+      return 'clock';
+    case 'recognition':
+      return 'trophy';
+    case 'survey':
+      return 'list-alt';
+    case 'reward':
+    case 'rewards':
+      return 'gift';
+    case 'hr':
+    case 'admin':
+      return 'user-shield';
+    default:
+      return 'bell';
+  }
+};
+
+const getModuleColor = (module: string): string => {
+  switch (module.toLowerCase()) {
+    case 'leave':
+      return '#FF9800';
+    case 'attendance':
+      return '#2196F3';
+    case 'recognition':
+      return '#6A1B9A';
+    case 'survey':
+      return '#4CAF50';
+    case 'reward':
+    case 'rewards':
+      return '#E91E63';
+    case 'hr':
+    case 'admin':
+      return '#9C27B0';
+    default:
+      return '#757575';
+  }
+};
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -48,12 +90,12 @@ export default function NotificationsScreen() {
   useEffect(() => {
     fetchNotifications();
 
-    // Subscribe to real-time notifications
+    // Subscribe to real-time notifications with immediate updates
     const setupRealtimeSubscription = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const subscription = supabase
-          .channel('notifications')
+          .channel('notifications_realtime')
           .on(
             'postgres_changes',
             {
@@ -64,7 +106,26 @@ export default function NotificationsScreen() {
             },
             (payload) => {
               console.log('New notification received:', payload);
-              setNotifications(current => [payload.new as Notification, ...current]);
+              const newNotification = payload.new as Notification;
+              setNotifications(current => [newNotification, ...current]);
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'notifications',
+              filter: `user_id=eq.${user.id}`,
+            },
+            (payload) => {
+              console.log('Notification updated:', payload);
+              const updatedNotification = payload.new as Notification;
+              setNotifications(current => 
+                current.map(notif => 
+                  notif.id === updatedNotification.id ? updatedNotification : notif
+                )
+              );
             }
           )
           .subscribe();
@@ -76,25 +137,35 @@ export default function NotificationsScreen() {
     };
 
     setupRealtimeSubscription();
+
+    // Cleanup on unmount
+    return () => {
+      // Any additional cleanup if needed
+    };
   }, []);
 
-  const handleNotificationPress = async (id: string) => {
+  const handleNotificationPress = async (notification: Notification) => {
     try {
-      // Update notification as read in database
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', id);
+      // Only update if not already read
+      if (!notification.is_read) {
+        // Update notification as read in database
+        const { error } = await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('id', notification.id);
 
-      if (error) {
-        console.error('Error updating notification:', error);
-        return;
+        if (error) {
+          console.error('Error updating notification:', error);
+          return;
+        }
+
+        // Update local state immediately
+        setNotifications(currentNotifications => 
+          currentNotifications.map(notif => 
+            notif.id === notification.id ? { ...notif, is_read: true } : notif
+          )
+        );
       }
-
-      // Update local state
-      setNotifications(notifications.map(notif => 
-        notif.id === id ? { ...notif, is_read: true } : notif
-      ));
     } catch (error) {
       console.error('Error in handleNotificationPress:', error);
     }
@@ -114,12 +185,14 @@ export default function NotificationsScreen() {
       const diffInHours = Math.floor(diffInMinutes / 60);
       const diffInDays = Math.floor(diffInHours / 24);
 
-      if (diffInMinutes < 60) {
-        return `${diffInMinutes} minutes ago`;
+      if (diffInMinutes < 1) {
+        return 'Just now';
+      } else if (diffInMinutes < 60) {
+        return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`;
       } else if (diffInHours < 24) {
-        return `${diffInHours} hours ago`;
+        return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
       } else if (diffInDays < 7) {
-        return `${diffInDays} days ago`;
+        return `${diffInDays} day${diffInDays !== 1 ? 's' : ''} ago`;
       } else {
         return format(date, 'MMM dd, yyyy');
       }
@@ -132,15 +205,22 @@ export default function NotificationsScreen() {
     <ScrollView 
       style={styles.container}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh}
+          colors={['#6A1B9A']}
+          tintColor="#6A1B9A"
+        />
       }
     >
       {loading ? (
         <View style={styles.emptyContainer}>
+          <FontAwesome5 name="bell" size={50} color="#ddd" />
           <Text style={styles.emptyText}>Loading notifications...</Text>
         </View>
       ) : notifications.length === 0 ? (
         <View style={styles.emptyContainer}>
+          <FontAwesome5 name="bell-slash" size={50} color="#ddd" />
           <Text style={styles.emptyText}>No new notifications</Text>
         </View>
       ) : (
@@ -151,16 +231,29 @@ export default function NotificationsScreen() {
               styles.notificationItem,
               !notification.is_read && styles.unreadItem
             ]}
-            onPress={() => handleNotificationPress(notification.id)}
+            onPress={() => handleNotificationPress(notification)}
+            activeOpacity={0.7}
           >
             <View style={styles.notificationContent}>
               <View style={styles.notificationHeader}>
-                <Text style={[
-                  styles.notificationTitle,
-                  !notification.is_read && styles.unreadText
-                ]}>
-                  {notification.title}
-                </Text>
+                <View style={styles.titleRow}>
+                  <View style={[
+                    styles.moduleIcon,
+                    { backgroundColor: getModuleColor(notification.module) }
+                  ]}>
+                    <FontAwesome5 
+                      name={getModuleIcon(notification.module)} 
+                      size={14} 
+                      color="white" 
+                    />
+                  </View>
+                  <Text style={[
+                    styles.notificationTitle,
+                    !notification.is_read && styles.unreadText
+                  ]}>
+                    {notification.title}
+                  </Text>
+                </View>
                 {!notification.is_read && (
                   <View style={styles.unreadDot} />
                 )}
@@ -168,9 +261,14 @@ export default function NotificationsScreen() {
               <Text style={styles.notificationMessage}>
                 {notification.message}
               </Text>
-              <Text style={styles.timestamp}>
-                {formatTimestamp(notification.created_at)}
-              </Text>
+              <View style={styles.notificationFooter}>
+                <Text style={styles.timestamp}>
+                  {formatTimestamp(notification.created_at)}
+                </Text>
+                <Text style={styles.moduleLabel}>
+                  {notification.module}
+                </Text>
+              </View>
             </View>
           </TouchableOpacity>
         ))
@@ -237,5 +335,26 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#6A1B9A',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  moduleIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  notificationFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  moduleLabel: {
+    fontSize: 12,
+    color: '#999',
   },
 }); 

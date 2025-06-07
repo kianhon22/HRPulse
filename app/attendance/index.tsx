@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
-import { supabase } from '../../../supabase';
-import { formatTotalHours } from '../../../utils/formatText';
-import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
-import RefreshWrapper from '../../../components/RefreshWrapper';
-import { getUserData } from '../../../hooks/getUserData';
+import { supabase } from '../../supabase';
+import { formatTotalHours } from '../../utils/formatText';
+import { useSupabaseRealtime } from '../../hooks/useSupabaseRealtime';
+import RefreshWrapper from '../../components/RefreshWrapper';
+import { getUserData } from '../../hooks/getUserData';
 
 interface AttendanceRecord {
   id: string;
@@ -184,7 +184,7 @@ export default function AttendancePage() {
         }}
       />
 
-      <RefreshWrapper 
+      <RefreshWrapper
         onRefresh={handleRefresh}
         style={styles.recordsList}
       >
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   dateContainer: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#6A1B9A',
     borderRadius: 8,
     padding: 10,
     alignItems: 'center',

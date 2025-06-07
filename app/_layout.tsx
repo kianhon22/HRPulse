@@ -209,6 +209,15 @@ export default function RootLayout() {
             }}
           />
           <Drawer.Screen
+            name="attendance"
+            options={{
+              drawerLabel: 'Attendance',
+              drawerIcon: ({ color, size }: { color: string; size: number }) => (
+                <Ionicons name="time" size={size} color={color} />
+              ),
+            }}
+          />
+          <Drawer.Screen
             name="calendar"
             options={{
               drawerLabel: 'Calendar',

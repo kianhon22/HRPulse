@@ -32,10 +32,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="attendance"
+        name="survey"
         options={{
-          title: 'Attendance',
-          tabBarIcon: ({ color }) => <TabBarIcon name="clock-o" color={color} />,
+          title: 'Survey',
+          tabBarIcon: ({ color }) => <TabBarIcon name="list-alt" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -55,17 +55,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="survey"
-        options={{
-          title: 'Survey',
-          tabBarIcon: ({ color }) => <TabBarIcon name="list-alt" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="rewards"
         options={{
           title: 'Rewards',
           tabBarIcon: ({ color }) => <TabBarIcon name="gift" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="attendance"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

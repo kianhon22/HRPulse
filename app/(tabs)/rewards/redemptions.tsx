@@ -126,9 +126,9 @@ export default function RedemptionsScreen() {
 
   const renderEmptyComponent = () => (
     <View style={styles.emptyContainer}>
-      <FontAwesome5 name="trophy" size={50} color="#ddd" />
+      <FontAwesome5 name="gift" size={50} color="#ddd" />
       <Text style={styles.emptyText}>
-        No {activeTab !== 'All' ? activeTab.toLowerCase() : ''} redemptions found
+        No {activeTab !== 'All' ? activeTab.toLowerCase() : ''} reward redemptions
       </Text>
       {activeTab !== 'All' && (
         <TouchableOpacity 
@@ -205,15 +205,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeTab: {
-    backgroundColor: '#f0e6f5',
+    backgroundColor: '#6A1B9A',
   },
   tabText: {
     fontSize: 14,
-    color: '#666',
+    color: 'black',
     fontWeight: '500',
   },
   activeTabText: {
-    color: '#6A1B9A',
+    color: '#ffffff',
     fontWeight: '600',
   },
   listContent: {
@@ -294,13 +294,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   viewAllButton: {
-    backgroundColor: '#f1f3f9',
+    backgroundColor: '#6A1B9A',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
   },
   viewAllButtonText: {
-    color: '#6A1B9A',
+    color: 'white',
     fontWeight: '600',
     fontSize: 14,
   },

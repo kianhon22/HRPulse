@@ -14,7 +14,7 @@ export default function RecognitionLayout() {
     if (pathname.includes('personal')) {
       setActiveTab('personal');
     } else if (pathname.includes('form')) {
-      // Don't change the active tab when on the form
+      setActiveTab('form');
     } else {
       setActiveTab('all');
     }
@@ -22,35 +22,40 @@ export default function RecognitionLayout() {
 
   const navigateTo = (tab: string) => {
     if (tab === 'all') {
-      router.push('/recognition' as any);
+      router.push('/recognition');
     } else {
-      router.push('/recognition/personal' as any);
+      router.push('/recognition/personal');
     }
   };
+
+  // Hide tabs when in form page
+  const showTabs = !pathname.includes('form');
 
   return (
     <View style={{ flex: 1 }}>
       <Header title="Recognitions" />
       
-      <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'all' && styles.activeTab]}
-          onPress={() => navigateTo('all')}
-        >
-          <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
-            All Recognitions
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'personal' && styles.activeTab]}
-          onPress={() => navigateTo('personal')}
-        >
-          <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>
-            My Recognitions
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {showTabs && (
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'all' && styles.activeTab]}
+            onPress={() => navigateTo('all')}
+          >
+            <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+              All Recognitions
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'personal' && styles.activeTab]}
+            onPress={() => navigateTo('personal')}
+          >
+            <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>
+              My Recognitions
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen 

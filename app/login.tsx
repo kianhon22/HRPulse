@@ -22,6 +22,12 @@ export default function Login() {
       return;
     }
 
+    // Email validation - must contain "@" symbol
+    if (!form.email.includes('@')) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -96,27 +102,33 @@ export default function Login() {
             {/* <Text style={styles.title}>HRPulse</Text> */}
             <Text style={styles.subtitle}>HRPulse - Employee Portal</Text>
             
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={form.email}
-              onChangeText={(text) => setForm(prev => ({ ...prev, email: text }))}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              editable={!loading}
-              autoComplete="email"
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your company email"
+                value={form.email}
+                onChangeText={(text) => setForm(prev => ({ ...prev, email: text }))}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                editable={!loading}
+                autoComplete="email"
+              />
+            </View>
             
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              value={form.password}
-              onChangeText={(text) => setForm(prev => ({ ...prev, password: text }))}
-              secureTextEntry
-              autoCapitalize="none"
-              editable={!loading}
-              autoComplete="password"
-            />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your password"
+                value={form.password}
+                onChangeText={(text) => setForm(prev => ({ ...prev, password: text }))}
+                secureTextEntry
+                autoCapitalize="none"
+                editable={!loading}
+                autoComplete="password"
+              />
+            </View>
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
@@ -185,12 +197,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#666',
   },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
   input: {
     height: 50,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
-    marginBottom: 15,
     paddingHorizontal: 15,
     fontSize: 16,
     backgroundColor: '#f9f9f9',

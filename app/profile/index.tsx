@@ -326,6 +326,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
+    paddingBottom: 5,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -369,8 +370,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   logoutSection: {
-    marginTop: 30,
-    marginBottom: 20,
+    marginBottom: 50,
     alignItems: 'center',
   },
   logoutButton: {

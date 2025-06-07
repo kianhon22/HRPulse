@@ -21,6 +21,7 @@ import { router } from 'expo-router';
 import { format } from 'date-fns';
 import { parseISO } from 'date-fns';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface Recognition {
   id: string;
@@ -182,13 +183,19 @@ export default function MyRecognitionScreen() {
     }
   };
 
+  const getStatusGradient = (status: string): [string, string] => {
+    switch(status) {
+      case 'Approved': return ['#4CAF50', '#66BB6A'];
+      case 'Rejected': return ['#F44336', '#FF6B6B'];
+      default: return ['#FFC107', '#FFD54F'];
+    }
+  };
   const renderRecognitionItem = useCallback(({ item }: { item: Recognition }) => {
     const isNominator = item.nominator === userData?.id;
     const otherParty = isNominator ? item.receiver_user : item.nominator_user;
     
     return (
       <TouchableOpacity 
-        style={styles.recognitionCard}
         onPress={() => {
           setSelectedRecognition(item);
           setModalVisible(true);
@@ -196,6 +203,10 @@ export default function MyRecognitionScreen() {
         accessibilityLabel={`Recognition ${isNominator ? 'given to' : 'received from'} ${otherParty?.name || 'Unknown'}`}
         accessibilityRole="button"
       >
+        <LinearGradient
+          colors={['#ffffff', '#f8f9fa']}
+          style={styles.recognitionCard}
+        >
         <View style={styles.recognitionHeader}>
           <View style={styles.userInfo}>
             <Image 
@@ -216,9 +227,12 @@ export default function MyRecognitionScreen() {
             </View>
           </View>
           
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+          <LinearGradient
+            colors={getStatusGradient(item.status)}
+            style={styles.statusBadge}
+          >
             <Text style={styles.statusText}>{item.status}</Text>
-          </View>
+          </LinearGradient>
         </View>
         
         <Text style={styles.descriptionText} numberOfLines={2}>
@@ -229,6 +243,7 @@ export default function MyRecognitionScreen() {
           <Text style={styles.pointsText}>{item.points} points</Text>
           <Text style={styles.dateText}>{format(parseISO(item.created_at), 'MMM d, yyyy')}</Text>
         </View>
+        </LinearGradient>
       </TouchableOpacity>
     );
   }, [userData?.id]);
@@ -266,14 +281,20 @@ export default function MyRecognitionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Total Points Banner */}
-      <View style={styles.pointsBanner}>
+      {/* Total Points Banner with Gradient */}
+      <LinearGradient
+        colors={['#6A1B9A', '#8E24AA']}
+        style={styles.pointsBanner}
+      >
         <Text style={styles.pointsLabel}>Your Total Points</Text>
         <Text style={styles.pointsValue}>{totalPoints}</Text>
-      </View>
+      </LinearGradient>
       
       {/* Search */}
-      <View style={styles.searchContainer}>
+      <LinearGradient
+        colors={['#F3E5F5', '#ffffff']}
+        style={styles.searchContainer}
+      >
         <View style={styles.searchInputContainer}>
           <FontAwesome5 name="search" size={16} color="#999" style={styles.searchIcon} />
           <TextInput
@@ -292,26 +313,26 @@ export default function MyRecognitionScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
-      </View>
+      </LinearGradient>
       
-      {/* Tab Selector */}
+      {/* Tab Selector with Enhanced Styling */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tabButton, activeTab === 'received' && styles.activeTab]}
           onPress={() => setActiveTab('received')}
           accessibilityLabel="View received recognitions"
-          accessibilityRole="tab"
+          accessibilityRole="button"
         >
           <Text style={[styles.tabText, activeTab === 'received' && styles.activeTabText]}>
             Received
           </Text>
         </TouchableOpacity>
         
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tabButton, activeTab === 'given' && styles.activeTab]}
           onPress={() => setActiveTab('given')}
           accessibilityLabel="View given recognitions"
-          accessibilityRole="tab"
+          accessibilityRole="button"
         >
           <Text style={[styles.tabText, activeTab === 'given' && styles.activeTabText]}>
             Given
@@ -423,7 +444,12 @@ export default function MyRecognitionScreen() {
         accessibilityLabel="Add new recognition"
         accessibilityRole="button"
       >
-        <FontAwesome5 name="plus" size={20} color="#fff" />
+        <LinearGradient
+          colors={['#6A1B9A', '#8E24AA']}
+          style={styles.floatingButtonGradient}
+        >
+          <FontAwesome5 name="plus" size={20} color="#fff" />
+        </LinearGradient>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -435,7 +461,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   pointsBanner: {
-    backgroundColor: '#6A1B9A',
     padding: 16,
     alignItems: 'center',
   },
@@ -451,7 +476,6 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     padding: 16,
-    backgroundColor: 'white',
   },
   searchInputContainer: {
     flexDirection: 'row',
@@ -470,20 +494,25 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'white',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f3f9',
+    marginHorizontal: 16,
+    marginVertical: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 4,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
+    borderRadius: 6,
   },
   activeTab: {
-    borderBottomColor: '#6A1B9A',
+    backgroundColor: '#6A1B9A',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   tabText: {
     fontSize: 16,
@@ -491,11 +520,10 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   activeTabText: {
-    color: '#6A1B9A',
+    color: 'white',
     fontWeight: '600',
   },
   recognitionCard: {
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -604,14 +632,18 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#6A1B9A',
-    justifyContent: 'center',
-    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 5,
+  },
+  floatingButtonGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -621,7 +653,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: 'white',
     width: '100%',
     maxHeight: '80%',
     borderRadius: 16,

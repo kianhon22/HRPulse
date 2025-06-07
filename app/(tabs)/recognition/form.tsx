@@ -250,7 +250,7 @@ export default function RecognitionForm() {
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Select Employee */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Employee *</Text>
+            <Text style={styles.label}>Employee <Text style={styles.asterisk}>*</Text></Text>
             <TouchableOpacity 
               style={[styles.input, errors.receiver && styles.inputError]} 
               onPress={() => setShowUserPicker(true)}
@@ -278,7 +278,7 @@ export default function RecognitionForm() {
           </View>
           
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Points *</Text>
+            <Text style={styles.label}>Points <Text style={styles.asterisk}>*</Text></Text>
             <TouchableOpacity 
               style={[styles.input, errors.points && styles.inputError]} 
               onPress={() => setShowPointsPicker(true)}
@@ -291,7 +291,7 @@ export default function RecognitionForm() {
                   <Text style={styles.selectedOptionName}>{selectedPointOption.label}</Text>
                 </View>
               ) : (
-                <Text style={styles.placeholderText}>Select Recognition</Text>
+                <Text style={styles.placeholderText}>Select Recognition Points</Text>
               )}
               <FontAwesome5 name="chevron-down" size={14} color="#999" />
             </TouchableOpacity>
@@ -302,7 +302,7 @@ export default function RecognitionForm() {
           
           {/* Recognition Description */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Description *</Text>
+            <Text style={styles.label}>Description <Text style={styles.asterisk}>*</Text></Text>
             <TextInput
               style={[styles.textArea, errors.description && styles.inputError]}
               placeholder="Elaborate why the employee deserves recognition"
@@ -340,7 +340,7 @@ export default function RecognitionForm() {
           
           <View style={styles.noteContainer}>
             <Text style={styles.noteText}>
-              Note: All recognitions are subject to HR approval before points are awarded.
+              * Recognitions will be reviewed and approved by HR before the points are awarded
             </Text>
           </View>
         </ScrollView>
@@ -514,13 +514,13 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   textArea: {
+    color: '#333',
     backgroundColor: 'white',
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     minHeight: 100,
-    fontSize: 16,
   },
   errorText: {
     color: '#F44336',
@@ -714,5 +714,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#888',
     textAlign: 'center',
+  },
+  asterisk: {
+    color: '#F44336',
+    fontWeight: 'bold',
   },
 }); 

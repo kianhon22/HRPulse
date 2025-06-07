@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import Header from '../../../components/Header';
+import Header from '../../components/Header';
 
 export default function AttendanceLayout() {
   return (
@@ -12,4 +12,4 @@ export default function AttendanceLayout() {
       />
     </Stack>
   );
-}
+} 

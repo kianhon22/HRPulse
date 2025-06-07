@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DrawerActions } from '@react-navigation/native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRouter, usePathname } from 'expo-router';
 import { supabase } from '../supabase';
 
 interface HeaderProps {
@@ -11,12 +11,15 @@ interface HeaderProps {
 
 export default function Header({ title }: HeaderProps) {
   const navigation = useNavigation();
+  const router = useRouter();
+  const pathname = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
+  const isOnNotificationPage = pathname === '/notifications';
 
   useEffect(() => {
     loadUnreadCount();
     
-    // Subscribe to notification changes
+    // Subscribe to notification changes for real-time updates
     const channel = supabase
       .channel('notification_changes')
       .on('postgres_changes', {
@@ -51,6 +54,16 @@ export default function Header({ title }: HeaderProps) {
     }
   }
 
+  const handleNotificationPress = () => {
+    if (isOnNotificationPage) {
+      // If already on notification page, go back
+      router.back();
+    } else {
+      // Navigate to notification page
+      router.push('/notifications');
+    }
+  };
+
   return (
     <View style={styles.header}>
       <TouchableOpacity
@@ -65,12 +78,16 @@ export default function Header({ title }: HeaderProps) {
       </View>
 
       <TouchableOpacity
-        onPress={() => navigation.navigate('notifications' as never)}
+        onPress={handleNotificationPress}
         style={styles.iconButton}
       >
         <View>
-          <Ionicons name="notifications" size={24} color="white" />
-          {unreadCount > 0 && (
+          <Ionicons 
+            name={"notifications"} 
+            size={24} 
+            color="white" 
+          />
+          {!isOnNotificationPage && unreadCount > 0 && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>
                 {unreadCount > 99 ? '99+' : unreadCount}

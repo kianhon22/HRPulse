@@ -170,7 +170,7 @@ export default function LeaveApplicationForm() {
         <Text style={styles.subtitle}>Please provide information about your leave.</Text>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Leave Type:</Text>
+          <Text style={styles.label}>Leave Type <Text style={styles.asterisk}>*</Text></Text>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={leaveType}
@@ -186,12 +186,12 @@ export default function LeaveApplicationForm() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Select Dates:</Text>
+          <Text style={styles.label}>Select Date <Text style={styles.asterisk}>*</Text></Text>
           <TouchableOpacity
             style={styles.dateButton}
             onPress={() => setShowStartDatePicker(true)}
           >
-            <Text>Start: {startDate.toLocaleDateString()}</Text>
+            <Text>Start Date: {startDate.toLocaleDateString()}</Text>
           </TouchableOpacity>
 
           {showStartDatePicker && (
@@ -207,7 +207,7 @@ export default function LeaveApplicationForm() {
             style={styles.dateButton}
             onPress={() => setShowEndDatePicker(true)}
           >
-            <Text>End: {endDate.toLocaleDateString()}</Text>
+            <Text>End Date: {endDate.toLocaleDateString()}</Text>
           </TouchableOpacity>
 
           {showEndDatePicker && (
@@ -225,7 +225,7 @@ export default function LeaveApplicationForm() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Reason:</Text>
+          <Text style={styles.label}>Reason <Text style={styles.asterisk}>*</Text></Text>
           <TextInput
             style={styles.textArea}
             multiline
@@ -237,11 +237,11 @@ export default function LeaveApplicationForm() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Attachment:</Text>
+          <Text style={styles.label}>Supporting Documents</Text>
           <View style={styles.uploadContainer}>
             <TextInput
               style={styles.uploadInput}
-              placeholder="pdf, jpg files"
+              placeholder="pdf/jpg/png"
               value={attachment?.assets?.[0]?.name || ''}
               editable={false}
             />
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   picker: {
-    height: 50,
+    height: 52,
   },
   dateButton: {
     backgroundColor: 'white',
@@ -364,5 +364,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontStyle: 'italic',
+  },
+  asterisk: {
+    color: '#F44336',
+    fontWeight: 'bold',
   },
 }); 

@@ -24,6 +24,7 @@ import { parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Slider from '@react-native-community/slider';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface Recognition {
   id: string;
@@ -283,18 +284,24 @@ export default function AllRecognitionScreen() {
 
   // Memoize user items to prevent unnecessary re-renders
   const renderUserItem = useCallback(({ item, index }: { item: UserRecognitionSum, index: number }) => {
-    const isTopThree = item.rank && item.rank <= 3;
+    const isTopThree = item.rank! <= 3;
     
     return (
       <TouchableOpacity 
-        style={[
-          styles.userCard,
-          isTopThree ? styles.topThreeCard : undefined
-        ]}
-        onPress={() => handleSelectUser(item)}
-        accessibilityLabel={`${item.name}, Rank ${item.rank}, ${item.total_points} points`}
+        onPress={() => {
+          setSelectedUser(item);
+          setModalVisible(true);
+        }}
+        accessibilityLabel={`View ${item.name}'s recognitions`}
         accessibilityRole="button"
       >
+        <LinearGradient
+          colors={isTopThree ? ['#FFF8E1', '#ffffff'] : ['#ffffff', '#f8f9fa']}
+          style={[
+            styles.userCard,
+            isTopThree ? styles.topThreeCard : undefined
+          ]}
+        >
         <View style={styles.rankContainer}>
           {isTopThree ? (
             <View style={[styles.topThreeRankBadge, getTopThreeStyle(item.rank)]}>
@@ -313,6 +320,18 @@ export default function AllRecognitionScreen() {
           accessibilityLabel={`Profile picture of ${item.name}`}
         />
         
+        {/* {item.image_url ? (
+          <Image 
+            source={{ uri: item.image_url }} 
+            style={styles.userImage} 
+            accessibilityLabel={`Profile picture of ${item.name}`}
+          />
+        ) : (
+          <View style={styles.userImagePlaceholder}>
+            <FontAwesome5 name="user" size={24} color="#6A1B9A" />
+          </View>
+        )} */}
+
         <View style={styles.userInfo}>
           <Text style={[
             styles.userName,
@@ -334,6 +353,7 @@ export default function AllRecognitionScreen() {
           </Text>
           <Text style={styles.pointsLabel}>points</Text>
         </View>
+        </LinearGradient>
       </TouchableOpacity>
     );
   }, []);
@@ -442,13 +462,19 @@ export default function AllRecognitionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Total Points Banner */}
-      <View style={styles.pointsBanner}>
+      {/* Total Points Banner with Gradient */}
+      <LinearGradient
+        colors={['#6A1B9A', '#8E24AA']}
+        style={styles.pointsBanner}
+      >
         <Text style={styles.bannerPointsLabel}>Total Recognition Points</Text>
         <Text style={styles.pointsValue}>{totalPoints}</Text>
-      </View>
+      </LinearGradient>
       
-      <View style={styles.searchContainer}>
+      <LinearGradient
+        colors={['#F3E5F5', '#ffffff']}
+        style={styles.searchContainer}
+      >
         <View style={styles.searchInputContainer}>
           <FontAwesome5 name="search" size={16} color="#999" style={styles.searchIcon} />
           <TextInput
@@ -474,18 +500,28 @@ export default function AllRecognitionScreen() {
           accessibilityLabel={showFilters ? "Hide filters" : "Show filters"}
           accessibilityRole="button"
         >
-          <FontAwesome5 
-            name="filter" 
-            size={16} 
-            color={showFilters || minPoints > 0 || maxPoints < highestPoints ||
+          <LinearGradient
+            colors={showFilters || minPoints > 0 || maxPoints < highestPoints ||
                   startDate > startOfMonth(new Date()) || endDate < endOfMonth(new Date())
-                  ? "#6A1B9A" : "#999"} 
-          />
+                  ? ['#6A1B9A', '#8E24AA'] : ['#f1f3f9', '#ffffff']}
+            style={styles.filterButtonGradient}
+          >
+            <FontAwesome5 
+              name="filter" 
+              size={16} 
+              color={showFilters || minPoints > 0 || maxPoints < highestPoints ||
+                    startDate > startOfMonth(new Date()) || endDate < endOfMonth(new Date())
+                    ? "white" : "#999"} 
+            />
+          </LinearGradient>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
       
       {showFilters && (
-        <View style={styles.filtersContainer}>
+        <LinearGradient
+          colors={['#FFEBEE', '#ffffff']}
+          style={styles.filtersContainer}
+        >
           <Text style={styles.filterTitle}>Points Range</Text>
           <View style={styles.rangeContainer}>
             <Text style={styles.rangeValue}>{minPoints}</Text>
@@ -525,8 +561,13 @@ export default function AllRecognitionScreen() {
               accessibilityLabel={`Select start date, currently ${format(startDate, 'MMMM d, yyyy')}`}
               accessibilityRole="button"
             >
-              <Text style={styles.dateLabel}>From:</Text>
-              <Text style={styles.dateValue}>{format(startDate, 'MMM d, yyyy')}</Text>
+              <LinearGradient
+                colors={['#E3F2FD', '#ffffff']}
+                style={styles.dateButtonGradient}
+              >
+                <Text style={styles.dateLabel}>From:</Text>
+                <Text style={styles.dateValue}>{format(startDate, 'MMM d, yyyy')}</Text>
+              </LinearGradient>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -535,8 +576,13 @@ export default function AllRecognitionScreen() {
               accessibilityLabel={`Select end date, currently ${format(endDate, 'MMMM d, yyyy')}`}
               accessibilityRole="button"
             >
-              <Text style={styles.dateLabel}>To:</Text>
-              <Text style={styles.dateValue}>{format(endDate, 'MMM d, yyyy')}</Text>
+              <LinearGradient
+                colors={['#E3F2FD', '#ffffff']}
+                style={styles.dateButtonGradient}
+              >
+                <Text style={styles.dateLabel}>To:</Text>
+                <Text style={styles.dateValue}>{format(endDate, 'MMM d, yyyy')}</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
           
@@ -568,9 +614,14 @@ export default function AllRecognitionScreen() {
             accessibilityLabel="Reset all filters"
             accessibilityRole="button"
           >
-            <Text style={styles.resetButtonText}>Reset Filters</Text>
+            <LinearGradient
+              colors={['#4CAF50', '#66BB6A']}
+              style={styles.resetButtonGradient}
+            >
+              <Text style={styles.resetButtonText}>Reset Filters</Text>
+            </LinearGradient>
           </TouchableOpacity>
-        </View>
+        </LinearGradient>
       )}
       
       {loading && !refreshing ? (
@@ -605,7 +656,10 @@ export default function AllRecognitionScreen() {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <LinearGradient
+            colors={['#ffffff', '#f8f9fa']}
+            style={styles.modalContent}
+          >
             <TouchableOpacity 
               style={styles.closeButton}
               onPress={() => setModalVisible(false)}
@@ -628,7 +682,7 @@ export default function AllRecognitionScreen() {
                 </ScrollView>
               </>
             )}
-          </View>
+          </LinearGradient>
         </View>
       </Modal>
       
@@ -639,7 +693,12 @@ export default function AllRecognitionScreen() {
         accessibilityLabel="Add new recognition"
         accessibilityRole="button"
       >
-        <FontAwesome5 name="plus" size={20} color="#fff" />
+        <LinearGradient
+          colors={['#6A1B9A', '#8E24AA']}
+          style={styles.floatingButtonGradient}
+        >
+          <FontAwesome5 name="plus" size={20} color="#fff" />
+        </LinearGradient>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -651,7 +710,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   pointsBanner: {
-    backgroundColor: '#6A1B9A',
     padding: 16,
     alignItems: 'center',
   },
@@ -669,7 +727,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: 'white',
   },
   searchInputContainer: {
     flex: 1,
@@ -692,12 +749,10 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f1f3f9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   filtersContainer: {
-    backgroundColor: 'white',
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#eee',
@@ -734,9 +789,7 @@ const styles = StyleSheet.create({
   },
   dateButton: {
     flex: 1,
-    backgroundColor: '#f1f3f9',
     borderRadius: 8,
-    padding: 12,
     marginHorizontal: 4,
   },
   dateLabel: {
@@ -755,13 +808,15 @@ const styles = StyleSheet.create({
   resetButton: {
     alignSelf: 'center',
     marginTop: 16,
+    borderRadius: 20,
+  },
+  resetButtonGradient: {
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#f1f3f9',
   },
   resetButtonText: {
-    color: '#6A1B9A',
+    color: 'white',
     fontWeight: '600',
   },
   listContent: {
@@ -771,7 +826,6 @@ const styles = StyleSheet.create({
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -782,7 +836,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   topThreeCard: {
-    backgroundColor: '#FFF8E1',
     borderWidth: 1,
     borderColor: '#FFD54F',
   },
@@ -822,6 +875,17 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     marginRight: 16,
+  },
+  userImagePlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   userInfo: {
     flex: 1,
@@ -889,7 +953,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: 'white',
     width: '90%',
     maxHeight: '75%',
     borderRadius: 16,
@@ -976,13 +1039,31 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#6A1B9A',
-    justifyContent: 'center',
-    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 5,
+  },
+  filterButtonGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  floatingButtonGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dateButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
   },
 }); 

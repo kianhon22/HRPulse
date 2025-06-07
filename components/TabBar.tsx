@@ -5,10 +5,10 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 const tabs = [
   { name: 'leave', title: 'Leave', icon: 'calendar' },
-  { name: 'attendance', title: 'Attendance', icon: 'clock-o' },
-  { name: 'index', title: 'Home', icon: 'home' },
   { name: 'survey', title: 'Survey', icon: 'list-alt' },
-  { name: 'rewards', title: 'Rewards', icon: 'trophy' },
+  { name: 'index', title: 'Home', icon: 'home' },
+  { name: 'recognition', title: 'Recognition', icon: 'trophy' },
+  { name: 'rewards', title: 'Rewards', icon: 'gift' },
 ];
 
 export default function TabBar() {

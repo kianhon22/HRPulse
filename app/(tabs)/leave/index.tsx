@@ -8,6 +8,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
 import RefreshWrapper from '../../../components/RefreshWrapper';
 import { getUserData } from '../../../hooks/getUserData';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface LeaveApplication {
   id: string;
@@ -160,6 +161,19 @@ export default function LeaveHistoryPage() {
     }
   }
 
+  function getStatusGradient(status: string): [string, string] {
+    switch (status) {
+      case 'Pending':
+        return ['#FF9800', '#FFB74D'];
+      case 'Approved':
+        return ['#4CAF50', '#66BB6A'];
+      case 'Rejected':
+        return ['#F44336', '#E57373'];
+      default:
+        return ['#808080', '#A0A0A0'];
+    }
+  }
+
   function formatDate(date: Date) {
     return new Date(date).toLocaleDateString('en-US', {
       day: 'numeric',
@@ -225,34 +239,44 @@ export default function LeaveHistoryPage() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Leave History</Text>
-        <Link href="/leave/apply" asChild>
-          <TouchableOpacity style={styles.applyButton}>
-            <FontAwesome name="plus" size={14} color="white" style={styles.plusIcon} />
-            <Text style={styles.applyButtonText}>Take Leave</Text>
-          </TouchableOpacity>
-        </Link>
-      </View>
+      <LinearGradient
+        colors={['#6A1B9A', '#8E24AA']}
+        style={styles.header}
+      >
+        {/* <Text style={styles.title}>Leave History</Text> */}
+      </LinearGradient>
 
-      <View style={styles.filterContainer}>
+      <LinearGradient
+        colors={['#F3E5F5', '#ffffff']}
+        style={styles.filterContainer}
+      >
         <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Leave Type:</Text>
-          <Picker
-            selectedValue={selectedType}
-            onValueChange={(value) => setSelectedType(value)}
-            style={styles.picker}
-          >
-            {LEAVE_TYPES.map((type) => (
-              <Picker.Item key={type} label={type} value={type} />
-            ))}
-          </Picker>
+          <View style={styles.leaveTypeSection}>
+            <Text style={[styles.filterLabel, { marginTop: 4 }]}>Leave Type:</Text>
+            <View style={styles.pickerWrapper}>
+              <Picker
+                selectedValue={selectedType}
+                onValueChange={(value) => setSelectedType(value)}
+                style={styles.picker}
+                dropdownIconColor="#6A1B9A"
+              >
+                {LEAVE_TYPES.map((type) => (
+                  <Picker.Item key={type} label={type} value={type} />
+                ))}
+              </Picker>
+            </View>
+          </View>
           
           <TouchableOpacity 
-            style={styles.clearFilterButton} 
+            style={styles.refreshButton} 
             onPress={clearFilters}
           >
-            <Text style={styles.clearFilterText}>Refresh</Text>
+            <LinearGradient
+              colors={['#6A1B9A', '#8E24AA']}
+              style={styles.refreshButtonGradient}
+            >
+              <FontAwesome name="refresh" size={20} color="white" />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
         
@@ -263,7 +287,10 @@ export default function LeaveHistoryPage() {
               style={styles.dateButton} 
               onPress={() => setShowStartDatePicker(true)}
             >
-              <Text>{formatDisplayDate(startDate)}</Text>
+              <View style={styles.dateButtonContent}>
+                <FontAwesome name="calendar" size={14} color="#6A1B9A" style={styles.dateIcon} />
+                <Text style={styles.dateButtonText}>{formatDisplayDate(startDate)}</Text>
+              </View>
             </TouchableOpacity>
             
             <Text style={styles.dateRangeSeparator}>to</Text>
@@ -272,7 +299,10 @@ export default function LeaveHistoryPage() {
               style={styles.dateButton} 
               onPress={() => setShowEndDatePicker(true)}
             >
-              <Text>{formatDisplayDate(endDate)}</Text>
+              <View style={styles.dateButtonContent}>
+                <FontAwesome name="calendar" size={14} color="#6A1B9A" style={styles.dateIcon} />
+                <Text style={styles.dateButtonText}>{formatDisplayDate(endDate)}</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -297,7 +327,7 @@ export default function LeaveHistoryPage() {
             maximumDate={new Date()}
           />
         )}
-      </View>
+      </LinearGradient>
 
       <RefreshWrapper onRefresh={handleRefresh}>
         <View style={styles.applicationsList}>
@@ -307,17 +337,21 @@ export default function LeaveHistoryPage() {
             </View>
           ) : (
             applications.map((application) => (
-              <View key={application.id} style={styles.applicationCard}>
+              <LinearGradient
+                key={application.id}
+                colors={['#ffffff', '#f8f9fa']}
+                style={styles.applicationCard}
+              >
                 <View style={styles.cardHeader}>
                   <Text style={styles.leaveType}>
                     {application.leave_type + ' Leave'}
                   </Text>
-                  <View style={[
-                    styles.statusBadge,
-                    { backgroundColor: getStatusColor(application.status) }
-                  ]}>
+                  <LinearGradient
+                    colors={getStatusGradient(application.status)}
+                    style={styles.statusBadge}
+                  >
                     <Text style={styles.statusText}>{application.status}</Text>
-                  </View>
+                  </LinearGradient>
                 </View>
 
                 <View>
@@ -337,15 +371,32 @@ export default function LeaveHistoryPage() {
                     style={styles.cancelButton}
                     onPress={() => handleCancelLeave(application.id)}
                   >
-                    <FontAwesome name="trash" size={19} color="white" />
+                    <LinearGradient
+                      colors={['#F44336', '#E57373']}
+                      style={styles.cancelButtonGradient}
+                    >
+                      <FontAwesome name="trash" size={19} color="white" />
+                    </LinearGradient>
                   </TouchableOpacity>
                 )}
-              </View>
+              </LinearGradient>
             ))
           )}
         </View>
         {cancelModal}
       </RefreshWrapper>
+
+      {/* Floating Take Leave Button */}
+      <Link href="/leave/apply" asChild>
+        <TouchableOpacity style={styles.floatingButton}>
+          <LinearGradient
+            colors={['#6A1B9A', '#8E24AA']}
+            style={styles.floatingButtonGradient}
+          >
+            <FontAwesome name="plus" size={24} color="white" />
+          </LinearGradient>
+        </TouchableOpacity>
+      </Link>
     </View>
   );
 }
@@ -359,8 +410,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'white',
+    // padding: 0,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
@@ -369,28 +419,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
-  applyButton: {
-    backgroundColor: '#6A1B9A',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  plusIcon: {
-    marginRight: 6,
-  },
   applicationsList: {
     flex: 1,
     padding: 16,
   },
   applicationCard: {
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
     elevation: 2,
@@ -429,59 +462,104 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   filterContainer: {
-    backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     paddingHorizontal: 16,
-    paddingBottom: 10,
+    padding: 8,
   },
   filterRow: {
-    width: 330,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   filterLabel: {
-    width: 80,
     fontSize: 14,
     fontWeight: '500',
     color: '#555',
+    minWidth: 80,
+    marginTop: -5,
+    marginBottom: 5,
   },
   dateFilterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
   },
   datePickerContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    width: '100%',
   },
   dateButton: {
     flex: 1,
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 5,
-    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   dateRangeSeparator: {
     marginHorizontal: 10,
     color: '#666',
-  },
-  clearFilterButton: {
-    alignSelf: 'center',
-    marginRight: -20,
-    padding: 8,
-    paddingHorizontal: 13,
-    borderRadius: 20,
-    backgroundColor: '#6A1B9A',
-  },
-  clearFilterText: {
-    color: 'white',
     fontWeight: '500',
   },
+  refreshButton: {
+    alignSelf: 'center',
+    borderRadius: 16,
+    marginLeft: 30,
+    marginRight: 10,
+  },
+  refreshButtonGradient: {
+    padding: 8,
+    borderRadius: 16,
+    width: 38,
+    height: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   picker: {
+    marginVertical: -10,
     flex: 1,
-    height: 55,
+    color: '#333',
+  },
+  pickerWrapper: {
+    color: '#333',
+    flex: 1,
+    marginLeft: 8,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    height: 40,
+  },
+  leaveTypeSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    height: 40,
+    marginRight: 12,
+  },
+  dateButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateIcon: {
+    marginRight: 5,
+  },
+  dateButtonText: {
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '500',
   },
   emptyStateContainer: {
     flex: 1,
@@ -498,10 +576,12 @@ const styles = StyleSheet.create({
     bottom: 10,
     right: 10,
     zIndex: 2,
-    backgroundColor: 'red',
+    borderRadius: 20,
+    elevation: 3,
+  },
+  cancelButtonGradient: {
     borderRadius: 20,
     padding: 5,
-    elevation: 3,
   },
   modalOverlay: {
     flex: 1,
@@ -525,5 +605,23 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 18,
     borderRadius: 8,
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    zIndex: 2,
+  },
+  floatingButtonGradient: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
   },
 }); 
