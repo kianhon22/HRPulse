@@ -57,7 +57,7 @@ export function usePushNotifications() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { error } = await supabase
-          .from('profiles')
+          .from('users')
           .update({ expo_push_token: token })
           .eq('id', user.id);
         
