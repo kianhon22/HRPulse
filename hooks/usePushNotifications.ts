@@ -24,6 +24,7 @@ export function usePushNotifications() {
 
   useEffect(() => {
     registerForPushNotificationsAsync().then(token => {
+      console.log('🔔 Push token received in hook:', token);
       setExpoPushToken(token);
       // Store token in Supabase profile
       if (token) {
@@ -64,7 +65,7 @@ export function usePushNotifications() {
         if (error) {
           console.error('Error updating push token:', error);
         } else {
-          console.log('Push token updated successfully');
+          console.log('✅ Push token updated successfully in database');
         }
       }
     } catch (error) {
@@ -79,9 +80,22 @@ export function usePushNotifications() {
 }
 
 async function registerForPushNotificationsAsync(): Promise<string | undefined> {
+  console.log('🚀 Starting push notification registration...');
+  
   let token;
 
+  // Check if it's a physical device
+  if (!Device.isDevice) {
+    console.warn('❌ Push notifications require a physical device');
+    alert('Must use physical device for Push Notifications');
+    return;
+  }
+
+  console.log('✅ Running on physical device');
+
+  // Set up Android notification channel
   if (Platform.OS === 'android') {
+    console.log('📱 Setting up Android notification channel...');
     await Notifications.setNotificationChannelAsync('default', {
       name: 'default',
       importance: Notifications.AndroidImportance.MAX,
@@ -90,35 +104,54 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
     });
   }
 
-  if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
+  // Request permissions
+  console.log('🔐 Checking permissions...');
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+  
+  console.log('Current permission status:', existingStatus);
+  
+  if (existingStatus !== 'granted') {
+    console.log('📋 Requesting permissions...');
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+  
+  if (finalStatus !== 'granted') {
+    console.error('❌ Permission not granted for push notifications');
+    alert('Failed to get push token for push notification!');
+    return;
+  }
+
+  console.log('✅ Permissions granted');
+  
+  try {
+    // Get project ID - this is the key part for Expo push notifications
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId || 
+                     Constants.easConfig?.projectId ||
+                     process.env.EXPO_PUBLIC_EAS_PROJECT_ID ||
+                     'e9494641-e6b3-455d-80c3-824bb2be88ec'; // Your specific project ID
     
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
+    console.log('🆔 Using project ID:', projectId);
+    console.log('📊 Constants debug info:');
+    console.log('  - expoConfig.extra:', Constants.expoConfig?.extra);
+    console.log('  - easConfig:', Constants.easConfig);
+    console.log('  - ENV var:', process.env.EXPO_PUBLIC_EAS_PROJECT_ID);
+    
+    if (!projectId) {
+      throw new Error('❌ Project ID not found in any configuration');
     }
     
-    if (finalStatus !== 'granted') {
-      alert('Failed to get push token for push notification!');
-      return;
-    }
+    console.log('🎯 Getting Expo push token...');
+    const tokenResult = await Notifications.getExpoPushTokenAsync({
+      projectId,
+    });
     
-    try {
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-      if (!projectId) {
-        throw new Error('Project ID not found');
-      }
-      
-      token = (await Notifications.getExpoPushTokenAsync({
-        projectId,
-      })).data;
-      console.log('Expo push token:', token);
-    } catch (e) {
-      console.error('Error getting push token:', e);
-    }
-  } else {
-    alert('Must use physical device for Push Notifications');
+    token = tokenResult.data;
+    console.log('🎉 Expo push token obtained successfully:', token);
+  } catch (e) {
+    console.error('❌ Error getting push token:', e);
+    console.error('Error details:', JSON.stringify(e, null, 2));
   }
 
   return token;
