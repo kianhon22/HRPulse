@@ -13,6 +13,9 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "e9494641-e6b3-455d-80c3-824bb2be88ec"
       }
     },
     "debug": {
@@ -26,7 +29,10 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_EAS_PROJECT_ID": "e9494641-e6b3-455d-80c3-824bb2be88ec"
+      }
     }
   },
   "submit": {

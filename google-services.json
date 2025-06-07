@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "843153182600",
+    "project_id": "hrpulse-ba91b",
+    "storage_bucket": "hrpulse-ba91b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:843153182600:android:34be53a691f8f15b7c343d",
+        "android_client_info": {
+          "package_name": "com.yourcompany.hrpulse"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTKt6rZnmsVzJVUnG72JgZvG67cO9TOxo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

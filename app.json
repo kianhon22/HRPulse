@@ -13,8 +13,9 @@
       "bundleIdentifier": "com.yourcompany.hrpulse"
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
+        "foregroundImage": "./assets/images/external-icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.yourcompany.hrpulse"
@@ -29,7 +30,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/icon.png",
+          "image": "./assets/images/external-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
