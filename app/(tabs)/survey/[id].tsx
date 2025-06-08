@@ -146,7 +146,7 @@ export default function SurveyDetailScreen() {
         // Initialize responses with user's previous responses
         setResponses(questionsData.map(q => ({
           question_id: q.id,
-          response: responsesMap[q.id] !== undefined ? responsesMap[q.id] : (q.type === 'Rating' ? 0 : '')
+          response: responsesMap[q.id] !== undefined ? responsesMap[q.id] : (q.type === 'rating' ? 0 : '')
         })));
       } else {
         setIsCompleted(false);
@@ -154,7 +154,7 @@ export default function SurveyDetailScreen() {
         // Initialize empty responses
         setResponses(questionsData.map(q => ({
           question_id: q.id,
-          response: q.type === 'Rating' ? 0 : ''
+          response: q.type === 'rating' ? 0 : ''
         })));
       }
     } catch (error) {
@@ -237,54 +237,88 @@ export default function SurveyDetailScreen() {
         return;
       }
 
-      // For Text surveys, perform sentiment analysis on each response
+      // First, insert all responses without sentiment analysis for immediate feedback
       let responseData = [];
+      let textResponses = [];
       
       for (const r of responses) {
         const question = questions.find(q => q.id === r.question_id);
         if (!question) continue;
+        
         if (question.type === 'text') {
           const responseText = String(r.response).trim();
-          let sentimentData = null;
           
-          if (responseText) {
-            sentimentData = await sentimentAnalysis(responseText);
-
-            if (Array.isArray(sentimentData)) {
-              // Remove extra words and convert to integer
-              sentimentData = sentimentData[0].map((item: { label: string; score: number }) => ({
-                label: parseInt(item.label),
-                score: item.score
-              }));
-            }
+          // Skip empty text responses - don't save them to database
+          if (!responseText) {
+            continue;
           }
           
-          responseData.push({
+          const responseRecord = {
             survey_id: id,
             question_id: r.question_id,
             user_id: user.id,
             response: r.response,
-            sentiment: sentimentData
-          });
+            sentiment: null // Will be updated later
+          };
+          
+          responseData.push(responseRecord);
+          textResponses.push({ ...responseRecord, responseText });
         } else {
-          responseData.push({
-            survey_id: id,
-            question_id: r.question_id,
-            user_id: user.id,
-            response: r.response
-          });
+          // For rating questions, ensure we have a valid response
+          if (r.response && r.response !== 0) {
+            responseData.push({
+              survey_id: id,
+              question_id: r.question_id,
+              user_id: user.id,
+              response: r.response
+            });
+          }
         }
       }
 
-      // Insert all responses with sentiment data if applicable
+      // Insert all responses immediately for fast user feedback
       const { error } = await supabase
         .from('survey_responses')
         .insert(responseData);
 
       if (error) throw error;
 
+      // Show success message immediately
       Alert.alert('Success', 'Survey submitted successfully');
       router.back();
+
+      // Perform sentiment analysis in the background and update records
+      if (textResponses.length > 0) {
+        // Don't await this - let it run in background
+        Promise.all(
+          textResponses.map(async (textResp) => {
+            try {
+              const sentimentData = await sentimentAnalysis(textResp.responseText);
+              
+              let processedSentiment = null;
+              if (Array.isArray(sentimentData)) {
+                processedSentiment = sentimentData[0].map((item: { label: string; score: number }) => ({
+                  label: parseInt(item.label),
+                  score: item.score
+                }));
+              }
+              
+              // Update the record with sentiment data
+              await supabase
+                .from('survey_responses')
+                .update({ sentiment: processedSentiment })
+                .eq('survey_id', textResp.survey_id)
+                .eq('question_id', textResp.question_id)
+                .eq('user_id', textResp.user_id);
+            } catch (err) {
+              console.error('Background sentiment analysis failed:', err);
+              // Fail silently for background processing
+            }
+          })
+        ).catch(err => {
+          console.error('Sentiment analysis batch failed:', err);
+        });
+      }
     } catch (error) {
       console.error('Error submitting survey:', error);
       Alert.alert('Error', 'Failed to submit survey. Please try again');

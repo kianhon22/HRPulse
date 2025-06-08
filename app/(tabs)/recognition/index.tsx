@@ -269,16 +269,8 @@ export default function AllRecognitionScreen() {
   };
 
   const handleSelectUser = (user: UserRecognitionSum) => {
-    // Filter user's recognitions to only include those within the date range
-    const updatedUser = {
-      ...user,
-      recognitions: user.recognitions.filter(rec => {
-        const recDate = parseISO(rec.created_at);
-        return isWithinInterval(recDate, { start: startDate, end: endDate });
-      })
-    };
-    
-    setSelectedUser(updatedUser);
+    // Show ALL recognitions in the modal, not just filtered ones
+    setSelectedUser(user);
     setModalVisible(true);
   };
 
@@ -288,10 +280,7 @@ export default function AllRecognitionScreen() {
     
     return (
       <TouchableOpacity 
-        onPress={() => {
-          setSelectedUser(item);
-          setModalVisible(true);
-        }}
+        onPress={() => handleSelectUser(item)}
         accessibilityLabel={`View ${item.name}'s recognitions`}
         accessibilityRole="button"
       >
@@ -406,24 +395,31 @@ export default function AllRecognitionScreen() {
   const renderRecognitionItem = (recognition: Recognition) => (
     <View key={recognition.id} style={styles.recognitionItem}>
       <View style={styles.recognitionHeader}>
+        <FontAwesome5 name="user-circle" size={16} color="#6A1B9A" style={{ marginRight: 8 }} />
         <View style={styles.nominatorInfo}>
           <Text style={styles.nominatorLabel}>Nominated by:</Text>
           <Text style={styles.nominatorName}>
             {recognition.nominator_user?.name || 'Unknown User'}
           </Text>
         </View>
-        
-        <View style={styles.recognitionPoints}>
-          <Text style={styles.recognitionPointsText}>{recognition.points} points</Text>
-        </View>
       </View>
       
-      <Text style={styles.recognitionDescription}>{recognition.descriptions}</Text>
+      <View style={styles.descriptionContainer}>
+        <Text style={styles.recognitionDescription}>{recognition.descriptions}</Text>
+      </View>
       
       <View style={styles.recognitionFooter}>
-        <Text style={styles.recognitionDate}>
-          {format(parseISO(recognition.created_at), 'MMM d, yyyy')}
-        </Text>
+        <View style={styles.recognitionDateContainer}>
+          <FontAwesome5 name="calendar-alt" size={12} color="#999" style={{ marginRight: 4 }} />
+          <Text style={styles.recognitionDate}>
+            {format(parseISO(recognition.created_at), 'MMM d, yyyy')}
+          </Text>
+        </View>
+        
+        <View style={styles.recognitionPoints}>
+          <FontAwesome5 name="star" size={12} color="white" style={{ marginRight: 4 }} />
+          <Text style={styles.recognitionPointsText}>{recognition.points} points</Text>
+        </View>
       </View>
     </View>
   );
@@ -671,11 +667,11 @@ export default function AllRecognitionScreen() {
             
             {selectedUser && (
               <>
-                <Text style={styles.modalTitle}>{selectedUser.name}'s Recognitions</Text>
+                <Text style={styles.modalTitle}>{selectedUser.name}</Text>
                 
                 <ScrollView 
                   style={styles.recognitionsList}
-                  // contentContainerStyle={{ paddingBottom: 20 }}
+                  contentContainerStyle={{ paddingBottom: 20 }}
                   showsVerticalScrollIndicator={false}
                 >
                   {selectedUser.recognitions.map(recognition => renderRecognitionItem(recognition))}
@@ -962,7 +958,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
-    // flexShrink: 1,
   },
   closeButton: {
     position: 'absolute',
@@ -970,6 +965,72 @@ const styles = StyleSheet.create({
     right: 10,
     zIndex: 1,
     padding: 6,
+  },
+  modalHeader: {
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  userProfileSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalUserAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 15,
+    borderWidth: 2,
+    borderColor: '#6A1B9A',
+  },
+  modalUserAvatarPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 15,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#6A1B9A',
+  },
+  userDetails: {
+    flex: 1,
+  },
+  modalUserName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  userStats: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  statBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    marginLeft: 4,
+  },
+  recognitionsCount: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   modalTitle: {
     fontSize: 22,
@@ -983,20 +1044,30 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   recognitionItem: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    shadowColor: '#6A1B9A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   recognitionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   nominatorInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   nominatorLabel: {
     fontSize: 12,
@@ -1008,29 +1079,55 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6A1B9A',
   },
-  recognitionPoints: {
-    backgroundColor: '#f0e6f5',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  descriptionContainer: {
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
-  },
-  recognitionPointsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6A1B9A',
+    padding: 12,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#6A1B9A',
   },
   recognitionDescription: {
     fontSize: 14,
     color: '#333',
-    lineHeight: 22,
-    marginBottom: 12,
+    lineHeight: 20,
+    fontStyle: 'italic',
   },
   recognitionFooter: {
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  recognitionDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   recognitionDate: {
     fontSize: 12,
     color: '#888',
+  },
+  recognitionPoints: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6A1B9A',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  recognitionPointsText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  emptyRecognitions: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyRecognitionsText: {
+    fontSize: 16,
+    color: '#888',
+    marginTop: 12,
   },
   floatingButton: {
     position: 'absolute',

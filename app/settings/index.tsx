@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function SettingsScreen() {
   const settingsOptions = [
-    { title: 'Notifications', icon: 'notifications-outline' },
     { title: 'Privacy', icon: 'lock-closed-outline' },
     { title: 'Help & Support', icon: 'help-circle-outline' },
     { title: 'About', icon: 'information-circle-outline' },

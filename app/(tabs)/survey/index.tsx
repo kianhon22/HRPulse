@@ -196,14 +196,8 @@ export default function SurveysScreen() {
                         <TouchableOpacity 
                           style={styles.actionButton}
                           onPress={() => router.push(`/survey/${survey.id}`)}
-                        >
-                          <LinearGradient
-                            colors={['#6A1B9A', '#8E24AA']}
-                            style={styles.buttonGradient}
-                          >
-                            <FontAwesome5 name="play" size={14} color="white"/>
-                            <Text style={styles.buttonText}>Start Now</Text>
-                          </LinearGradient>
+                        >                            
+                          <Text style={styles.buttonText}><FontAwesome5 name="play" size={14} color="white"/> Start Now</Text>
                         </TouchableOpacity>
                       )}
                     </View>

@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     width: cardWidth,
     backgroundColor: 'white',
     borderRadius: 12,
-    marginHorizontal: 8,
+    marginHorizontal: 4,
     marginBottom: 16,
     overflow: 'hidden',
     shadowColor: '#000',
