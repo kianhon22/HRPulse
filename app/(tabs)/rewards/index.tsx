@@ -18,6 +18,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '../../../supabase';
 import { getUserData } from '../../../hooks/getUserData';
 import Slider from '@react-native-community/slider';
+import RefreshWrapper from '../../../components/RefreshWrapper';
 
 interface Reward {
   id: string;
@@ -80,6 +81,11 @@ export default function RewardsCatalogScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle refresh for pull-to-refresh
+  const handleRefresh = async () => {
+    await loadRewards();
   };
 
   const filterRewards = () => {
@@ -272,15 +278,18 @@ export default function RewardsCatalogScreen() {
           <Text style={styles.loadingText}>Loading rewards...</Text>
         </View>
       ) : (
-        <FlatList
-          data={filteredRewards}
-          renderItem={renderRewardItem}
-          keyExtractor={(item) => item.id}
-          numColumns={numColumns}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={renderEmptyComponent}
-        />
+        <RefreshWrapper onRefresh={handleRefresh}>
+          <FlatList
+            data={filteredRewards}
+            renderItem={renderRewardItem}
+            keyExtractor={(item) => item.id}
+            numColumns={numColumns}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={renderEmptyComponent}
+            scrollEnabled={false}
+          />
+        </RefreshWrapper>
       )}
       
       {/* Reward Detail Modal */}

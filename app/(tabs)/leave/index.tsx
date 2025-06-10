@@ -9,6 +9,7 @@ import { useSupabaseRealtime } from '../../../hooks/useSupabaseRealtime';
 import RefreshWrapper from '../../../components/RefreshWrapper';
 import { getUserData } from '../../../hooks/getUserData';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 
 interface LeaveApplication {
   id: string;
@@ -41,6 +42,7 @@ export default function LeaveHistoryPage() {
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [selectedCancelId, setSelectedCancelId] = useState<string | null>(null);
+  const [remainingLeaves, setRemainingLeaves] = useState<number>(0);
 
   // Format date for display
   const formatDisplayDate = (date: Date | null) => {
@@ -117,12 +119,62 @@ export default function LeaveHistoryPage() {
     handleLeaveChange
   );
 
-  // Load initial data when userData or filters change
+  // Calculate remaining leaves function (copied from home page)
+  const calculateRemainingLeaves = useCallback(async () => {
+    if (userData?.leave) {
+      const currentYear = new Date().getFullYear();
+      const startOfYear = `${currentYear}-01-01`;
+      const endOfYear = `${currentYear}-12-31`;
+
+      try {
+        const { data, error } = await supabase
+          .from('leaves')
+          .select('period')
+          .eq('user_id', userData.id)
+          .eq('status', 'Approved')
+          .gte('start_date', startOfYear)
+          .lte('end_date', endOfYear);
+
+        if (error) throw error;
+
+        const usedLeaves = data?.reduce((total, leave) => total + (leave.period || 0), 0) || 0;
+        const remaining = userData.leave - usedLeaves;
+        setRemainingLeaves(remaining);
+        return remaining;
+
+      } catch (error) {
+        console.error('Error calculating remaining leaves:', error);
+        setRemainingLeaves(userData.leave);
+        return userData.leave;
+      }
+    }
+    return 0;
+  }, [userData]);
+
+  // Check if user can apply for leave
+  const handleApplyLeave = async () => {
+    const remaining = await calculateRemainingLeaves();
+    
+    if (remaining <= 0) {
+      Alert.alert(
+        'Cannot Apply Leave',
+        'You have no remaining leave days for this year. Please contact HR if you believe this is an error.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return;
+    }
+    
+    // Navigate to apply leave page
+    router.push('/leave/apply');
+  };
+
+  // Load initial data and calculate remaining leaves
   useEffect(() => {
     if (userData?.id) {
       loadLeaveApplications();
+      calculateRemainingLeaves();
     }
-  }, [userData?.id, loadLeaveApplications]);
+  }, [userData?.id, loadLeaveApplications, calculateRemainingLeaves]);
 
   // Handle refresh
   const handleRefresh = useCallback(async () => {
@@ -278,7 +330,7 @@ export default function LeaveHistoryPage() {
               <FontAwesome name="refresh" size={20} color="white" />
             </LinearGradient>
           </TouchableOpacity>
-        </View>
+        </View>       
         
         <View style={styles.dateFilterRow}>
           <Text style={styles.filterLabel}>Date Range:</Text>
@@ -326,7 +378,15 @@ export default function LeaveHistoryPage() {
             minimumDate={startDate || undefined}
             maximumDate={new Date()}
           />
+          
         )}
+
+        <View style={styles.remainingLeavesContainer}>
+          <Text style={styles.remainingLeavesLabel}>Remaining Leaves: </Text>
+          <Text style={[styles.remainingLeavesValue, remainingLeaves <= 0 && styles.noLeavesValue]}>
+            {remainingLeaves} days
+          </Text>
+        </View>
       </LinearGradient>
 
       <RefreshWrapper onRefresh={handleRefresh}>
@@ -387,16 +447,14 @@ export default function LeaveHistoryPage() {
       </RefreshWrapper>
 
       {/* Floating Take Leave Button */}
-      <Link href="/leave/apply" asChild>
-        <TouchableOpacity style={styles.floatingButton}>
-          <LinearGradient
-            colors={['#6A1B9A', '#8E24AA']}
-            style={styles.floatingButtonGradient}
-          >
-            <FontAwesome name="plus" size={24} color="white" />
-          </LinearGradient>
-        </TouchableOpacity>
-      </Link>
+      <TouchableOpacity style={styles.floatingButton} onPress={handleApplyLeave}>
+        <LinearGradient
+          colors={['#6A1B9A', '#8E24AA']}
+          style={styles.floatingButtonGradient}
+        >
+          <FontAwesome name="plus" size={24} color="white" />
+        </LinearGradient>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -623,5 +681,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 5,
+  },
+  remainingLeavesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    // justifyContent: 'space-between',
+    // backgroundColor: '#f8f9fa',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 4,
+    marginBottom: -8,
+  },
+  remainingLeavesLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#555',
+  },
+  remainingLeavesValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6A1B9A',
+  },
+  noLeavesValue: {
+    color: '#F44336',
+    fontWeight: 'bold',
   },
 }); 

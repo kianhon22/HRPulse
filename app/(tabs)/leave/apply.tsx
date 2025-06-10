@@ -134,7 +134,7 @@ export default function LeaveApplicationForm() {
       const period = calculateDays(startDate, endDate);
       
       // Upload attachment if exists
-      // const attachmentUrl = await uploadAttachment(user.id);
+      const attachmentUrl = await uploadAttachment(user.id);
 
       const { error } = await supabase
         .from('leaves')
@@ -147,7 +147,7 @@ export default function LeaveApplicationForm() {
             period,
             reason,
             status: 'Pending',
-            // attachment_url: attachmentUrl,
+            attachment_url: attachmentUrl,
           },
         ]);
 

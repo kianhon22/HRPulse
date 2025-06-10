@@ -12,6 +12,7 @@ import { router } from 'expo-router';
 import { differenceInMinutes, differenceInYears } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
+import RefreshWrapper from '../../components/RefreshWrapper';
 
 interface AttendanceRecord {
   id?: string;
@@ -415,7 +416,20 @@ export default function Home() {
     );
   }
 
-
+  // Handle refresh for pull-to-refresh
+  const handleRefresh = async () => {
+    try {
+      await Promise.all([
+        loadTodayAttendance(),
+        calculateRemainingLeaves(),
+        loadAnnouncements(),
+        loadActiveSurvey(),
+        loadArticles(),
+      ]);
+    } catch (error) {
+      console.error('Error during refresh:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -427,14 +441,10 @@ export default function Home() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.container}>
-          <HomeHeader />
-
+      <View style={styles.container}>
+        <HomeHeader />
+        
+        <RefreshWrapper onRefresh={handleRefresh}>
           <View style={styles.content}>
             {/* Attendance Card - Modern Design with Gradient */}
             <LinearGradient
@@ -690,8 +700,8 @@ export default function Home() {
               </LinearGradient>
             )}
           </View>
-        </View>
-      </ScrollView>
+        </RefreshWrapper>
+      </View>
     </SafeAreaView>
   );
 }

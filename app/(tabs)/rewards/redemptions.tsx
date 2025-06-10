@@ -14,6 +14,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '../../../supabase';
 import { getUserData } from '../../../hooks/getUserData';
 import { format, parseISO } from 'date-fns';
+import RefreshWrapper from '../../../components/RefreshWrapper';
 
 interface Redemption {
   id: string;
@@ -68,6 +69,11 @@ export default function RedemptionsScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle refresh for pull-to-refresh
+  const handleRefresh = async () => {
+    await loadRedemptions();
   };
 
   const getStatusColor = (status: string) => {
@@ -168,14 +174,17 @@ export default function RedemptionsScreen() {
           <Text style={styles.loadingText}>Loading redemptions...</Text>
         </View>
       ) : (
-        <FlatList
-          data={filteredRedemptions}
-          renderItem={renderRedemptionItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={renderEmptyComponent}
-        />
+        <RefreshWrapper onRefresh={handleRefresh}>
+          <FlatList
+            data={filteredRedemptions}
+            renderItem={renderRedemptionItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={renderEmptyComponent}
+            scrollEnabled={false}
+          />
+        </RefreshWrapper>
       )}
     </SafeAreaView>
   );

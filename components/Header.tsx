@@ -14,19 +14,40 @@ export default function Header({ title }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
   const isOnNotificationPage = pathname === '/notifications';
 
   useEffect(() => {
-    loadUnreadCount();
-    
-    // Subscribe to notification changes for real-time updates
+    initializeComponent();
+  }, []);
+
+  // Refresh unread count when user navigates to/from notification page
+  useEffect(() => {
+    if (userId) {
+      loadUnreadCount();
+    }
+  }, [pathname, userId]);
+
+  const initializeComponent = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setUserId(user.id);
+      loadUnreadCount();
+      setupRealtimeSubscription(user.id);
+    }
+  };
+
+  const setupRealtimeSubscription = (currentUserId: string) => {
+    // Subscribe to notification changes for the current user only
     const channel = supabase
-      .channel('notification_changes')
+      .channel(`notification_changes_${currentUserId}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'notifications',
-      }, () => {
+        filter: `user_id=eq.${currentUserId}`,
+      }, (payload) => {
+        console.log('Notification change for user:', payload);
         loadUnreadCount();
       })
       .subscribe();
@@ -34,7 +55,7 @@ export default function Header({ title }: HeaderProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  };
 
   async function loadUnreadCount() {
     try {

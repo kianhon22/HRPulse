@@ -14,6 +14,27 @@ export default function SettingsLayout() {
             headerShown: true,
           }}
         />
+        <Stack.Screen
+          name="privacy"
+          options={{
+            header: () => <Header title="Privacy Policy" />,
+            headerShown: true,
+          }}
+        />
+        <Stack.Screen
+          name="help"
+          options={{
+            header: () => <Header title="Help & Support" />,
+            headerShown: true,
+          }}
+        />
+        <Stack.Screen
+          name="about"
+          options={{
+            header: () => <Header title="About" />,
+            headerShown: true,
+          }}
+        />
       </Stack>
       <TabBar />
     </View>

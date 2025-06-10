@@ -1,18 +1,35 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 export default function SettingsScreen() {
   const settingsOptions = [
-    { title: 'Privacy', icon: 'lock-closed-outline' },
-    { title: 'Help & Support', icon: 'help-circle-outline' },
-    { title: 'About', icon: 'information-circle-outline' },
+    { 
+      title: 'Privacy', 
+      icon: 'lock-closed-outline', 
+      onPress: () => router.push('./settings/privacy' as any)
+    },
+    { 
+      title: 'Help & Support', 
+      icon: 'help-circle-outline', 
+      onPress: () => router.push('./settings/help' as any)
+    },
+    { 
+      title: 'About', 
+      icon: 'information-circle-outline', 
+      onPress: () => router.push('./settings/about' as any)
+    },
   ];
 
   return (
     <ScrollView style={styles.container}>
       {settingsOptions.map((option, index) => (
-        <TouchableOpacity key={option.title} style={styles.optionButton}>
+        <TouchableOpacity 
+          key={option.title} 
+          style={styles.optionButton}
+          onPress={option.onPress}
+        >
           <View style={styles.optionContent}>
             <Ionicons name={option.icon as any} size={24} color="#666" />
             <Text style={styles.optionText}>{option.title}</Text>
