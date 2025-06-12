@@ -13,7 +13,9 @@ import { router } from 'expo-router';
 import { supabase } from '../../../supabase';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { Picker } from '@react-native-picker/picker';
+import { decode } from 'base64-arraybuffer';
 
 const LEAVE_TYPES = [
   'Annual',
@@ -34,6 +36,7 @@ export default function LeaveApplicationForm() {
       name: string;
       uri: string;
       mimeType?: string;
+      size?: number;
     }>;
   } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -92,30 +95,61 @@ export default function LeaveApplicationForm() {
     const filePath = `${fileName}`;
 
     try {
-      // Convert URI to Blob
-      const response = await fetch(file.uri);
-      const blob = await response.blob();
+      console.log('Starting file upload:', {
+        fileName: file.name,
+        uri: file.uri,
+        mimeType: file.mimeType,
+        size: file.size
+      });
 
+      // Validate file size (limit to 10MB)
+      if (file.size && file.size > 50 * 1024 * 1024) {
+        Alert.alert('Error', 'File size must be less than 50MB');
+        return null;
+      }
+
+      let fileData: ArrayBuffer;
+      
+      // Read file as base64 and convert to ArrayBuffer
+      console.log('Reading file as base64...');
+      const base64 = await FileSystem.readAsStringAsync(file.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      console.log('Converting base64 to ArrayBuffer...');
+      fileData = decode(base64);
+
+      console.log('Uploading to Supabase storage...');
       // Upload to Supabase Storage
       const { data, error } = await supabase
         .storage
         .from('leaves')
-        .upload(filePath, blob, {
-          contentType: file.mimeType || 'application/octet-stream'
+        .upload(filePath, fileData, {
+          contentType: file.mimeType || 'application/octet-stream',
+          upsert: false
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase storage error:', error);
+        throw error;
+      }
 
+      console.log('Upload successful, getting public URL...');
       // Get public URL
       const { data: { publicUrl } } = supabase
         .storage
         .from('leaves')
         .getPublicUrl(filePath);
 
+      console.log('File uploaded successfully:', publicUrl);
       return publicUrl;
     } catch (error) {
       console.error('Error uploading file:', error);
-      Alert.alert('Error', 'Failed to upload file');
+      if (error instanceof Error) {
+        Alert.alert('Error', `Failed to upload file: ${error.message}`);
+      } else {
+        Alert.alert('Error', 'Failed to upload file');
+      }
       return null;
     }
   };
